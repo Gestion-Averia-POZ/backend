@@ -1,0 +1,21 @@
+// Prisma schema for PostgreSQL with PostGIS support
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis]
+}
+
+// Example model with PostGIS geometry field
+// model Report {
+//   id        Int      @id @default(autoincrement())
+//   title     String
+//   location  Unsupported("geometry(Point, 4326)")?
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+// }
