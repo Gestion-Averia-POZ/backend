@@ -1,0 +1,7 @@
+{
+  "imports": {
+    "std/": "https://deno.land/std@0.177.0/",
+    "upstash_redis": "https://esm.sh/@upstash/redis@1.20.0",
+    "https://deno.land/x/sha1@v1.0.3/deps.ts": "https://esm.sh/sha1@1.1.1"
+  }
+}

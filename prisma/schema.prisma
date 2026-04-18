@@ -8,14 +8,248 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-  extensions = [postgis]
+  directUrl  = env("DIRECT_URL")
+  extensions = [postgis, uuidOssp(map: "uuid-ossp")]
 }
 
-// Example model with PostGIS geometry field
-// model Report {
-//   id        Int      @id @default(autoincrement())
-//   title     String
-//   location  Unsupported("geometry(Point, 4326)")?
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
-// }
+// ROLES Y PERMISOS
+model Role {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name        String   @unique @db.VarChar(50)
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relaciones
+  users           User[]
+  rolePermissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name           String   @unique @db.VarChar(100)
+  description    String?
+  resource       String?  @db.VarChar(100)
+  permissionType String?  @map("permission_type") @db.VarChar(50)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relaciones
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  roleId       String     @map("role_id") @db.Uuid
+  permissionId String     @map("permission_id") @db.Uuid
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relaciones
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@map("role_permissions")
+}
+
+// USUARIOS
+model User {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  roleId        String?  @map("role_id") @db.Uuid
+  name          String   @db.VarChar(100)
+  lastname      String   @db.VarChar(100)
+  phoneNumber   String?  @map("phone_number") @db.VarChar(20)
+  email         String   @unique @db.VarChar(150)
+  password      String
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relaciones
+  role                Role?           @relation(fields: [roleId], references: [id])
+  reports             Report[]        @relation("UserReports")
+  assignedReports     Report[]        @relation("AssignedManager")
+  historyChanges      HistoryChange[]
+
+  // Índices para optimizar consultas
+  @@index([email]) // Ya existe como unique, pero explícito
+  @@index([roleId]) // Para filtrar por rol
+  @@index([isActive]) // Para filtrar usuarios activos
+  @@index([createdAt]) // Para ordenar por fecha de creación
+  @@index([roleId, isActive]) // Índice compuesto para consultas comunes
+  @@map("users")
+}
+
+// GEOGRAFÍA
+model Neighborhood {
+  id        Int                                        @id @default(autoincrement())
+  name      String                                     @db.VarChar(150)
+  geom      Unsupported("geometry(Polygon, 4326)")
+  totalArea Float?                                     @map("total_area")
+  createdAt DateTime                                   @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relaciones
+  streets Street[]
+  reports Report[]
+
+  @@map("neighborhood")
+}
+
+model Street {
+  id             Int                                         @id @default(autoincrement())
+  neighborhoodId Int                                         @map("neighborhood_id")
+  name           String                                      @db.VarChar(150)
+  geom           Unsupported("geometry(LineString, 4326)")
+  createdAt      DateTime                                    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime                                    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relaciones
+  neighborhood Neighborhood @relation(fields: [neighborhoodId], references: [id], onDelete: Cascade)
+  reports      Report[]
+
+  @@map("street")
+}
+
+// EMPRESAS Y SERVICIOS
+model Company {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name        String   @db.VarChar(150)
+  description String?
+  rif         String?  @unique @db.VarChar(50)
+  address     String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relaciones
+  companyServices CompanyService[]
+  reports         Report[]
+
+  @@map("company")
+}
+
+model Service {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name        String   @db.VarChar(100)
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relaciones
+  companyServices CompanyService[]
+  reports         Report[]
+
+  @@map("service")
+}
+
+model CompanyService {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  serviceId String   @map("service_id") @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relaciones
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("company_service")
+}
+
+// CATEGORÍAS Y ESTADOS
+model Category {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name      String   @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relaciones
+  reports Report[]
+
+  // Índices
+  @@index([name]) // Para búsquedas por nombre de categoría
+  @@map("category")
+}
+
+model State {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(50)
+  colorHex  String?  @map("color_hex") @db.VarChar(7)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relaciones
+  reports              Report[]
+  historyChangesPrev   HistoryChange[] @relation("PreviousState")
+  historyChangesNew    HistoryChange[] @relation("NewState")
+
+  // Índices
+  @@index([name]) // Para búsquedas por nombre de estado
+  @@map("state")
+}
+
+// REPORTES
+model Report {
+  id                String                                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  title             String                                 @db.VarChar(150)
+  description       String?
+  location          Unsupported("geometry(Point, 4326)")
+  address           String?
+  urlPhoto          String?                                @map("url_photo")
+  userId            String?                                @map("user_id") @db.Uuid
+  assignedManagerId String?                                @map("assigned_manager_id") @db.Uuid
+  stateId           Int?                                   @map("state_id")
+  categoryId        String?                                @map("category_id") @db.Uuid
+  companyId         String?                                @map("company_id") @db.Uuid
+  serviceId         String?                                @map("service_id") @db.Uuid
+  streetId          Int?                                   @map("street_id")
+  neighborhoodId    Int?                                   @map("neighborhood_id")
+  createdAt         DateTime                               @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime                               @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relaciones
+  user            User?           @relation("UserReports", fields: [userId], references: [id])
+  assignedManager User?           @relation("AssignedManager", fields: [assignedManagerId], references: [id])
+  state           State?          @relation(fields: [stateId], references: [id])
+  category        Category?       @relation(fields: [categoryId], references: [id])
+  company         Company?        @relation(fields: [companyId], references: [id])
+  service         Service?        @relation(fields: [serviceId], references: [id])
+  street          Street?         @relation(fields: [streetId], references: [id])
+  neighborhood    Neighborhood?   @relation(fields: [neighborhoodId], references: [id])
+  historyChanges  HistoryChange[]
+
+  // Índices para optimizar consultas de reportes
+  @@index([userId]) // Para reportes por usuario
+  @@index([assignedManagerId]) // Para reportes asignados
+  @@index([stateId]) // Para filtrar por estado
+  @@index([categoryId]) // Para filtrar por categoría
+  @@index([companyId]) // Para reportes por empresa
+  @@index([neighborhoodId]) // Para reportes por barrio
+  @@index([createdAt]) // Para ordenar por fecha
+  @@index([stateId, createdAt]) // Índice compuesto común
+  @@index([userId, stateId]) // Para reportes de usuario por estado
+  @@index([categoryId, stateId]) // Para reportes por categoría y estado
+  @@map("report")
+}
+
+// HISTORIAL DE CAMBIOS
+model HistoryChange {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  reportId      String   @map("report_id") @db.Uuid
+  userId        String?  @map("user_id") @db.Uuid
+  previousState Int?     @map("previous_state")
+  newState      Int?     @map("new_state")
+  comment       String?
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relaciones
+  report        Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user          User?  @relation(fields: [userId], references: [id])
+  previousStateRef State? @relation("PreviousState", fields: [previousState], references: [id])
+  newStateRef   State? @relation("NewState", fields: [newState], references: [id])
+
+  // Índices para historial
+  @@index([reportId]) // Para historial por reporte
+  @@index([userId]) // Para cambios por usuario
+  @@index([createdAt]) // Para ordenar por fecha
+  @@index([reportId, createdAt]) // Índice compuesto para historial ordenado
+  @@map("history_change")
+}

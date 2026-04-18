@@ -1,8 +1,10 @@
 import { Router } from 'express';
-import reportRoutes from './report.routes';
+import { authRoutes } from '../modules/auth';
+import healthRoutes from './health.routes';
 
 const router = Router();
 
-router.use('/reports', reportRoutes);
+router.use('/auth', authRoutes);
+router.use('/health', healthRoutes);
 
 export default router;
