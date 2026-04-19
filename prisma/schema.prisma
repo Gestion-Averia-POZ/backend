@@ -92,25 +92,9 @@ model Neighborhood {
   createdAt DateTime                                   @default(now()) @map("created_at") @db.Timestamptz
 
   // Relaciones
-  streets Street[]
   reports Report[]
 
   @@map("neighborhood")
-}
-
-model Street {
-  id             Int                                         @id @default(autoincrement())
-  neighborhoodId Int                                         @map("neighborhood_id")
-  name           String                                      @db.VarChar(150)
-  geom           Unsupported("geometry(LineString, 4326)")
-  createdAt      DateTime                                    @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt      DateTime                                    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-
-  // Relaciones
-  neighborhood Neighborhood @relation(fields: [neighborhoodId], references: [id], onDelete: Cascade)
-  reports      Report[]
-
-  @@map("street")
 }
 
 // EMPRESAS Y SERVICIOS
@@ -120,6 +104,7 @@ model Company {
   description String?
   rif         String?  @unique @db.VarChar(50)
   address     String?
+  isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -127,6 +112,8 @@ model Company {
   companyServices CompanyService[]
   reports         Report[]
 
+  // Índices
+  @@index([isActive]) // Para filtrar empresas activas
   @@map("company")
 }
 
@@ -134,12 +121,15 @@ model Service {
   id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   name        String   @db.VarChar(100)
   description String?
+  isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   // Relaciones
   companyServices CompanyService[]
   reports         Report[]
 
+  // Índices
+  @@index([isActive]) // Para filtrar servicios activos
   @@map("service")
 }
 
@@ -160,6 +150,7 @@ model CompanyService {
 model Category {
   id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   name      String   @db.VarChar(100)
+  isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   // Relaciones
@@ -167,6 +158,7 @@ model Category {
 
   // Índices
   @@index([name]) // Para búsquedas por nombre de categoría
+  @@index([isActive]) // Para filtrar categorías activas
   @@map("category")
 }
 
@@ -194,13 +186,14 @@ model Report {
   location          Unsupported("geometry(Point, 4326)")
   address           String?
   urlPhoto          String?                                @map("url_photo")
+  priority          String?                                @db.VarChar(20) // BAJA, MEDIA, ALTA, CRITICA
+  isActive          Boolean                                @default(true) @map("is_active")
   userId            String?                                @map("user_id") @db.Uuid
   assignedManagerId String?                                @map("assigned_manager_id") @db.Uuid
   stateId           Int?                                   @map("state_id")
   categoryId        String?                                @map("category_id") @db.Uuid
   companyId         String?                                @map("company_id") @db.Uuid
   serviceId         String?                                @map("service_id") @db.Uuid
-  streetId          Int?                                   @map("street_id")
   neighborhoodId    Int?                                   @map("neighborhood_id")
   createdAt         DateTime                               @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime                               @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
@@ -212,7 +205,6 @@ model Report {
   category        Category?       @relation(fields: [categoryId], references: [id])
   company         Company?        @relation(fields: [companyId], references: [id])
   service         Service?        @relation(fields: [serviceId], references: [id])
-  street          Street?         @relation(fields: [streetId], references: [id])
   neighborhood    Neighborhood?   @relation(fields: [neighborhoodId], references: [id])
   historyChanges  HistoryChange[]
 
@@ -223,10 +215,13 @@ model Report {
   @@index([categoryId]) // Para filtrar por categoría
   @@index([companyId]) // Para reportes por empresa
   @@index([neighborhoodId]) // Para reportes por barrio
+  @@index([priority]) // Para filtrar por prioridad
+  @@index([isActive]) // Para filtrar reportes activos
   @@index([createdAt]) // Para ordenar por fecha
   @@index([stateId, createdAt]) // Índice compuesto común
   @@index([userId, stateId]) // Para reportes de usuario por estado
   @@index([categoryId, stateId]) // Para reportes por categoría y estado
+  @@index([priority, stateId]) // Para reportes por prioridad y estado
   @@map("report")
 }
 

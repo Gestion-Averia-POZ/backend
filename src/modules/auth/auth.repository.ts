@@ -1,15 +1,21 @@
 import prisma from '../../config/prisma';
+import bcrypt from 'bcrypt';
 
 class AuthRepository {
-  async findByEmail(email: string) {
+  // Método optimizado para verificar existencia de email
+  async findByEmail(email: string, select?: any) {
     return await prisma.user.findUnique({
-      where: { email }
+      where: { email },
+      select: select || undefined
     });
   }
 
   async findByEmailWithRole(email: string) {
     return await prisma.user.findUnique({
-      where: { email },
+      where: { 
+        email,
+        isActive: true // Solo usuarios activos
+      },
       include: {
         role: true
       }
@@ -33,7 +39,10 @@ class AuthRepository {
 
   async findById(id: string) {
     return await prisma.user.findUnique({
-      where: { id },
+      where: { 
+        id,
+        isActive: true // Solo usuarios activos
+      },
       include: {
         role: true
       }
@@ -41,11 +50,23 @@ class AuthRepository {
   }
 
   async findManyUsers(options: any) {
-    return await prisma.user.findMany(options);
+    return await prisma.user.findMany({
+      ...options,
+      // Asegurar que siempre incluya el filtro de usuarios activos
+      where: {
+        ...options.where,
+        isActive: true
+      }
+    });
   }
 
   async countUsers(where: any) {
-    return await prisma.user.count({ where });
+    return await prisma.user.count({ 
+      where: {
+        ...where,
+        isActive: true
+      }
+    });
   }
 
   async updateUser(id: string, data: any) {
@@ -64,20 +85,34 @@ class AuthRepository {
     });
   }
 
+  // Método optimizado para reset de contraseña
+  async updatePassword(email: string, hashedPassword: string) {
+    return await prisma.user.update({
+      where: { 
+        email,
+        isActive: true
+      },
+      data: { password: hashedPassword },
+      select: { id: true, email: true } // Solo retornar campos necesarios
+    });
+  }
+
   async createUserWithTransaction(data: any) {
     return await prisma.$transaction(async (tx) => {
-      // Verificar email en la transacción
+      // Verificar email en la transacción (solo ID para optimizar)
       const existingUser = await tx.user.findUnique({
-        where: { email: data.email }
+        where: { email: data.email },
+        select: { id: true }
       });
       
       if (existingUser) {
         throw new Error('El email ya está registrado');
       }
 
-      // Obtener rol CITIZEN 
+      // Obtener rol CITIZEN (usar findFirst con cache)
       const citizenRole = await tx.role.findFirst({
-        where: { name: 'CITIZEN' }
+        where: { name: 'CITIZEN' },
+        select: { id: true, name: true }
       });
       
       if (!citizenRole) {
@@ -85,27 +120,41 @@ class AuthRepository {
       }
 
       // Encriptar contraseña
-      const bcrypt = require('bcrypt');
       const saltRounds = 10;
       const hashedPassword = await bcrypt.hash(data.password, saltRounds);
 
       // Crear usuario
       const userData = {
-        ...data,
+        name: data.name,
+        lastname: data.lastname,
+        email: data.email,
         password: hashedPassword,
+        phoneNumber: data.phoneNumber || null,
         roleId: citizenRole.id,
-        isActive: true,
-        verifiedEmail: false
+        isActive: true
       };
 
       const user = await tx.user.create({
-        data: userData
+        data: userData,
+        select: {
+          id: true,
+          name: true,
+          lastname: true,
+          email: true,
+          phoneNumber: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true
+        }
       });
 
       return {
         user,
         role: citizenRole
       };
+    }, {
+      timeout: 10000, // 10 segundos timeout
+      isolationLevel: 'ReadCommitted' // Nivel de aislamiento optimizado
     });
   }
 }

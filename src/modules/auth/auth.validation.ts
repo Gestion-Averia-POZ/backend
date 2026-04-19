@@ -66,9 +66,9 @@ const updateUserSchema = z.object({
     .regex(/^\+?[1-9]\d{1,14}$/, 'Número de teléfono inválido')
     .optional()
     .or(z.literal('')),
-  isActive: z.boolean().optional(),
-  verifiedEmail: z.boolean().optional()
+  isActive: z.boolean().optional()
 });
+
 
 // Tipos TypeScript derivados de los schemas
 export type RegisterData = z.infer<typeof registerSchema>;

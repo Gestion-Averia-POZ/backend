@@ -77,6 +77,31 @@ const options = {
             verifiedEmail: { type: 'boolean', example: true }
           }
         },
+        SendOTPRequest: {
+          type: 'object',
+          required: ['email'],
+          properties: {
+            email: { type: 'string', format: 'email', example: 'usuario@example.com' }
+          }
+        },
+        VerifyOTPRequest: {
+          type: 'object',
+          required: ['email', 'code', 'purpose'],
+          properties: {
+            email: { type: 'string', format: 'email', example: 'usuario@example.com' },
+            code: { type: 'string', pattern: '^[0-9]{6}$', example: '123456' },
+            purpose: { type: 'string', enum: ['register', 'reset-password'], example: 'register' }
+          }
+        },
+        ResetPasswordRequest: {
+          type: 'object',
+          required: ['email', 'code', 'newPassword'],
+          properties: {
+            email: { type: 'string', format: 'email', example: 'usuario@example.com' },
+            code: { type: 'string', pattern: '^[0-9]{6}$', example: '123456' },
+            newPassword: { type: 'string', minLength: 8, maxLength: 100, example: 'NuevaPassword123' }
+          }
+        },
         AuthResponse: {
           type: 'object',
           properties: {
@@ -153,12 +178,17 @@ const options = {
       {
         name: 'Users',
         description: 'User management operations'
+      },
+      {
+        name: 'OTP',
+        description: 'One-Time Password operations for registration and password reset'
       }
     ]
   },
   apis: [
     './src/routes/*.ts',
-    './src/modules/*/auth.routes.ts'
+    './src/modules/*/auth.routes.ts',
+    './src/modules/*/otp.routes.ts'
   ]
 };
 

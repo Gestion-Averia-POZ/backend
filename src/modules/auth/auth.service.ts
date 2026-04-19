@@ -19,7 +19,6 @@ class AuthService {
         email: result.user.email,
         role: result.role.name,
         isActive: result.user.isActive,
-        verifiedEmail: result.user.verifiedEmail
       },
       token
     };
@@ -34,7 +33,7 @@ class AuthService {
 
     // Verificar si el usuario está activo
     if (!user.isActive) {
-      throw new Error('Usuario inactivo');
+      throw new Error('Usuario inactivo. Contacta al administrador.');
     }
 
     // Verificar contraseña
@@ -53,15 +52,15 @@ class AuthService {
         lastname: user.lastname,
         email: user.email,
         role: user.role?.name,
-        isActive: user.isActive,
-        verifiedEmail: user.verifiedEmail
+        isActive: user.isActive
       },
       token
     };
   }
 
   async checkEmailExists(email: string): Promise<boolean> {
-    const user = await authRepository.findByEmail(email);
+    // Usar select específico para optimizar la consulta
+    const user = await authRepository.findByEmail(email, { id: true });
     return !!user;
   }
 
@@ -69,6 +68,11 @@ class AuthService {
     const user = await authRepository.findById(id);
     if (!user) {
       throw new Error('Usuario no encontrado');
+    }
+
+    // Solo mostrar usuarios activos
+    if (!user.isActive) {
+      throw new Error('Usuario no disponible');
     }
 
     return {
@@ -79,7 +83,6 @@ class AuthService {
       phoneNumber: user.phoneNumber,
       role: user.role?.name,
       isActive: user.isActive,
-      verifiedEmail: user.verifiedEmail,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
     };
@@ -91,6 +94,11 @@ class AuthService {
       throw new Error('Usuario no encontrado');
     }
 
+    // Solo mostrar usuarios activos
+    if (!user.isActive) {
+      throw new Error('Usuario no disponible');
+    }
+
     return {
       id: user.id,
       name: user.name,
@@ -99,7 +107,6 @@ class AuthService {
       phoneNumber: user.phoneNumber,
       role: user.role?.name,
       isActive: user.isActive,
-      verifiedEmail: user.verifiedEmail,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
     };
@@ -109,7 +116,10 @@ class AuthService {
     const { page, limit, role } = options;
     const skip = (page - 1) * limit;
 
-    const where = role ? { role: { name: role } } : {};
+    // Siempre filtrar solo usuarios activos
+    const where = role 
+      ? { role: { name: role }, isActive: true } 
+      : { isActive: true };
 
     const [users, total] = await Promise.all([
       authRepository.findManyUsers({
@@ -129,7 +139,6 @@ class AuthService {
       phoneNumber: user.phoneNumber,
       role: user.role?.name,
       isActive: user.isActive,
-      verifiedEmail: user.verifiedEmail,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
     }));
@@ -171,16 +180,17 @@ class AuthService {
     const updatedUser = await authRepository.updateUser(id, updateData);
 
     return {
-      id: updatedUser.id,
-      name: updatedUser.name,
-      lastname: updatedUser.lastname,
-      email: updatedUser.email,
-      phoneNumber: updatedUser.phoneNumber,
-      role: updatedUser.role?.name,
-      isActive: updatedUser.isActive,
-      verifiedEmail: updatedUser.verifiedEmail,
-      createdAt: updatedUser.createdAt,
-      updatedAt: updatedUser.updatedAt
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        lastname: updatedUser.lastname,
+        email: updatedUser.email,
+        phoneNumber: updatedUser.phoneNumber,
+        role: updatedUser.role?.name,
+        isActive: updatedUser.isActive,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt
+      }
     };
   }
 
@@ -196,6 +206,23 @@ class AuthService {
     
     // O eliminar completamente (hard delete)
     // await authRepository.deleteUser(id);
+  }
+
+  async resetPassword(email: string, newPassword: string) {
+    // Encriptar nueva contraseña
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    // Actualizar contraseña usando método optimizado
+    const updatedUser = await authRepository.updatePassword(email, hashedPassword);
+    
+    if (!updatedUser) {
+      throw new Error('Usuario no encontrado o inactivo');
+    }
+
+    return {
+      message: 'Contraseña actualizada exitosamente'
+    };
   }
 
   private generateToken(userId: string, email: string, role: string): string {
