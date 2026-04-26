@@ -13,6 +13,7 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node prisma/seed.ts",
     "db:seed": "npm run prisma:seed",
+    "import:geojson": "ts-node scripts/import-geojson.ts",
     "clean": "rm -rf dist .cache .prisma/client",
     "install:prod": "npm ci --only=production",
     "postinstall": "prisma generate"
@@ -29,6 +30,7 @@
   "license": "ISC",
   "dependencies": {
     "@prisma/client": "^5.0.0",
+    "@supabase/supabase-js": "^2.104.1",
     "@upstash/redis": "^1.37.0",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",

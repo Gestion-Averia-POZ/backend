@@ -22,29 +22,14 @@ const router = Router();
  *               email:
  *                 type: string
  *                 format: email
- *                 minLength: 5
- *                 maxLength: 40
  *                 example: juan.perez@example.com
- *                 description: Email del usuario (máximo 40 caracteres)
  *     responses:
  *       200:
  *         description: OTP enviado exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
  *       400:
  *         description: Email ya registrado o datos inválidos
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  *       429:
  *         description: Ya existe un código activo
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/send-register', validateSendOTP, sendRegisterOTP);
 
@@ -66,29 +51,14 @@ router.post('/send-register', validateSendOTP, sendRegisterOTP);
  *               email:
  *                 type: string
  *                 format: email
- *                 minLength: 5
- *                 maxLength: 40
  *                 example: juan.perez@example.com
- *                 description: Email del usuario registrado (máximo 40 caracteres)
  *     responses:
  *       200:
  *         description: OTP enviado exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
  *       404:
  *         description: Email no encontrado
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  *       429:
  *         description: Ya existe un código activo
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/send-reset-password', validateSendOTP, sendResetPasswordOTP);
 
@@ -97,7 +67,7 @@ router.post('/send-reset-password', validateSendOTP, sendResetPasswordOTP);
  * /api/otp/verify:
  *   post:
  *     summary: Verificar código OTP
- *     description: Verifica un código OTP de 6 dígitos para registro o recuperación de contraseña
+ *     description: Verifica un código OTP de 6 dígitos
  *     tags: [OTP]
  *     requestBody:
  *       required: true
@@ -110,41 +80,22 @@ router.post('/send-reset-password', validateSendOTP, sendResetPasswordOTP);
  *               email:
  *                 type: string
  *                 format: email
- *                 minLength: 5
- *                 maxLength: 40
  *                 example: juan.perez@example.com
- *                 description: Email del usuario (máximo 40 caracteres)
  *               code:
  *                 type: string
  *                 pattern: '^[0-9]{6}$'
- *                 minLength: 6
- *                 maxLength: 6
  *                 example: '123456'
- *                 description: Código OTP de 6 dígitos numéricos
  *               purpose:
  *                 type: string
  *                 enum: [register, reset-password]
  *                 example: register
- *                 description: 'Propósito del OTP: "register" para registro o "reset-password" para recuperación de contraseña'
  *     responses:
  *       200:
  *         description: OTP verificado exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
  *       400:
- *         description: Código incorrecto o inválido
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
+ *         description: Código incorrecto
  *       404:
  *         description: Código no encontrado o expirado
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/verify', validateVerifyOTP, verifyOTP);
 
@@ -153,7 +104,7 @@ router.post('/verify', validateVerifyOTP, verifyOTP);
  * /api/otp/reset-password:
  *   post:
  *     summary: Cambiar contraseña usando código OTP
- *     description: Restablece la contraseña del usuario usando verificación OTP
+ *     description: Restablece la contraseña del usuario
  *     tags: [OTP]
  *     requestBody:
  *       required: true
@@ -166,42 +117,23 @@ router.post('/verify', validateVerifyOTP, verifyOTP);
  *               email:
  *                 type: string
  *                 format: email
- *                 minLength: 5
- *                 maxLength: 40
  *                 example: juan.perez@example.com
- *                 description: Email del usuario (máximo 40 caracteres)
  *               code:
  *                 type: string
  *                 pattern: '^[0-9]{6}$'
- *                 minLength: 6
- *                 maxLength: 6
  *                 example: '123456'
- *                 description: Código OTP de 6 dígitos numéricos
  *               newPassword:
  *                 type: string
  *                 minLength: 6
  *                 maxLength: 25
  *                 example: NuevaPassword123
- *                 description: Nueva contraseña (entre 6 y 25 caracteres)
  *     responses:
  *       200:
  *         description: Contraseña cambiada exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
  *       400:
  *         description: Código incorrecto o contraseña inválida
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
  *         description: Código no encontrado o expirado
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/reset-password', validateResetPassword, resetPassword);
 
@@ -210,7 +142,7 @@ router.post('/reset-password', validateResetPassword, resetPassword);
  * /api/otp/status:
  *   get:
  *     summary: Consultar estado del OTP
- *     description: Obtiene información sobre el estado actual del OTP para un email y propósito específico
+ *     description: Obtiene información sobre el estado actual del OTP
  *     tags: [OTP]
  *     parameters:
  *       - in: query
@@ -220,7 +152,6 @@ router.post('/reset-password', validateResetPassword, resetPassword);
  *           type: string
  *           format: email
  *         example: usuario@example.com
- *         description: Email del usuario
  *       - in: query
  *         name: purpose
  *         required: true
@@ -228,20 +159,11 @@ router.post('/reset-password', validateResetPassword, resetPassword);
  *           type: string
  *           enum: [register, reset-password]
  *         example: register
- *         description: 'Propósito del OTP: "register" o "reset-password"'
  *     responses:
  *       200:
- *         description: Estado del OTP obtenido exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
+ *         description: Estado del OTP obtenido
  *       400:
- *         description: Parámetros faltantes o inválidos
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
+ *         description: Parámetros inválidos
  */
 router.get('/status', getOTPStatus);
 
@@ -250,15 +172,11 @@ router.get('/status', getOTPStatus);
  * /api/otp/test-email:
  *   get:
  *     summary: Probar conexión de email
- *     description: Verifica que la configuración de email esté funcionando correctamente
+ *     description: Verifica la configuración de email
  *     tags: [OTP]
  *     responses:
  *       200:
- *         description: Estado de la conexión de email
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
+ *         description: Estado de la conexión
  */
 router.get('/test-email', testEmailConnection);
 

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { validate } from '../../middleware/validate.middleware';
 
 // Validación para enviar OTP (registro o recuperación)
+// Usa las mismas reglas que auth.validation para email
 export const sendOTPSchema = z.object({
   body: z.object({
     email: z
@@ -9,9 +10,9 @@ export const sendOTPSchema = z.object({
         required_error: 'El email es requerido',
         invalid_type_error: 'El email debe ser una cadena de texto'
       })
-      .email('Formato de email inválido')
+      .email('Email inválido')
       .min(5, 'El email debe tener al menos 5 caracteres')
-      .max(40, 'El email no puede exceder 40 caracteres')
+      .max(40, 'El email no puede tener más de 30 caracteres')
       .toLowerCase()
       .trim()
   })
@@ -25,9 +26,9 @@ export const verifyOTPSchema = z.object({
         required_error: 'El email es requerido',
         invalid_type_error: 'El email debe ser una cadena de texto'
       })
-      .email('Formato de email inválido')
+      .email('Email inválido')
       .min(5, 'El email debe tener al menos 5 caracteres')
-      .max(40, 'El email no puede exceder 40 caracteres')
+      .max(40, 'El email no puede tener más de 30 caracteres')
       .toLowerCase()
       .trim(),
     code: z
@@ -42,11 +43,11 @@ export const verifyOTPSchema = z.object({
         required_error: 'El propósito es requerido',
         invalid_type_error: 'El propósito debe ser "register" o "reset-password"'
       })
-      .describe('Propósito del OTP: "register" para registro o "reset-password" para recuperación de contraseña')
   })
 });
 
 // Validación para resetear contraseña
+// Usa las mismas reglas que auth.validation para email y password
 export const resetPasswordSchema = z.object({
   body: z.object({
     email: z
@@ -54,9 +55,9 @@ export const resetPasswordSchema = z.object({
         required_error: 'El email es requerido',
         invalid_type_error: 'El email debe ser una cadena de texto'
       })
-      .email('Formato de email inválido')
+      .email('Email inválido')
       .min(5, 'El email debe tener al menos 5 caracteres')
-      .max(40, 'El email no puede exceder 40 caracteres')
+      .max(40, 'El email no puede tener más de 30 caracteres')
       .toLowerCase()
       .trim(),
     code: z
@@ -72,8 +73,7 @@ export const resetPasswordSchema = z.object({
         invalid_type_error: 'La contraseña debe ser una cadena de texto'
       })
       .min(6, 'La contraseña debe tener al menos 6 caracteres')
-      .max(25, 'La contraseña no puede exceder 25 caracteres')
-      .trim()
+      .max(25, 'La contraseña no puede tener más de 25 caracteres')
   })
 });
 

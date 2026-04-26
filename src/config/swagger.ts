@@ -182,13 +182,18 @@ const options = {
       {
         name: 'OTP',
         description: 'One-Time Password operations for registration and password reset'
+      },
+      {
+        name: 'Reports',
+        description: 'Report management with automatic neighborhood detection using PostGIS'
       }
     ]
   },
   apis: [
     './src/routes/*.ts',
     './src/modules/*/auth.routes.ts',
-    './src/modules/*/otp.routes.ts'
+    './src/modules/*/otp.routes.ts',
+    './src/modules/*/reports.routes.ts'
   ]
 };
 
