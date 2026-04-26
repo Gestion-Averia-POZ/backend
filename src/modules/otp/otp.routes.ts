@@ -67,7 +67,7 @@ router.post('/send-reset-password', validateSendOTP, sendResetPasswordOTP);
  * /api/otp/verify:
  *   post:
  *     summary: Verificar código OTP
- *     description: Verifica un código OTP de 6 dígitos
+ *     description: Verifica un código OTP de 6 dígitos. purpose= register o reset-password
  *     tags: [OTP]
  *     requestBody:
  *       required: true

@@ -59,6 +59,7 @@ model RolePermission {
 model User {
   id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   roleId        String?  @map("role_id") @db.Uuid
+  companyId     String?  @map("company_id") @db.Uuid
   name          String   @db.VarChar(100)
   lastname      String   @db.VarChar(100)
   phoneNumber   String?  @map("phone_number") @db.VarChar(20)
@@ -70,6 +71,7 @@ model User {
 
   // Relaciones
   role                Role?           @relation(fields: [roleId], references: [id])
+  company             Company?        @relation(fields: [companyId], references: [id])
   reports             Report[]        @relation("UserReports")
   assignedReports     Report[]        @relation("AssignedManager")
   historyChanges      HistoryChange[]
@@ -77,6 +79,7 @@ model User {
   // Índices para optimizar consultas
   @@index([email]) // Ya existe como unique, pero explícito
   @@index([roleId]) // Para filtrar por rol
+  @@index([companyId]) // Para filtrar por empresa
   @@index([isActive]) // Para filtrar usuarios activos
   @@index([createdAt]) // Para ordenar por fecha de creación
   @@index([roleId, isActive]) // Índice compuesto para consultas comunes
@@ -109,8 +112,9 @@ model Company {
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   // Relaciones
-  companyServices CompanyService[]
-  reports         Report[]
+  companyCategories CompanyCategory[]
+  reports           Report[]
+  users             User[]
 
   // Índices
   @@index([isActive]) // Para filtrar empresas activas
@@ -125,7 +129,6 @@ model Service {
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   // Relaciones
-  companyServices CompanyService[]
   reports         Report[]
 
   // Índices
@@ -133,17 +136,17 @@ model Service {
   @@map("service")
 }
 
-model CompanyService {
-  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  serviceId String   @map("service_id") @db.Uuid
-  companyId String   @map("company_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+model CompanyCategory {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  categoryId String   @map("category_id") @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   // Relaciones
-  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  @@map("company_service")
+  @@map("company_category")
 }
 
 // CATEGORÍAS Y ESTADOS
@@ -154,7 +157,8 @@ model Category {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   // Relaciones
-  reports Report[]
+  reports           Report[]
+  companyCategories CompanyCategory[]
 
   // Índices
   @@index([name]) // Para búsquedas por nombre de categoría
