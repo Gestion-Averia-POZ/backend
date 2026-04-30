@@ -236,7 +236,12 @@ router.get('/user-by-email/:email', authenticateToken, getUserByEmail);
  *         schema:
  *           type: string
  *           enum: [ADMIN, COMPANY, WORKER, CITIZEN]
- *         description: Filter by user role
+ *         description: Filter by user role name (partial match, case insensitive)
+ *       - in: query
+ *         name: companyName
+ *         schema:
+ *           type: string
+ *         description: Filter by company name (partial match, case insensitive)
  *     responses:
  *       200:
  *         description: Users retrieved successfully

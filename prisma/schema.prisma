@@ -121,19 +121,23 @@ model Company {
   @@map("company")
 }
 
-model Service {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+model FailureType {
+  id          Int      @id @default(autoincrement())
   name        String   @db.VarChar(100)
   description String?
+  priority    String   @default("MEDIA") @db.VarChar(20) // BAJA, MEDIA, ALTA, CRITICA
+  categoryId  String?  @map("category_id") @db.Uuid
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   // Relaciones
-  reports         Report[]
+  reports     Report[]
+  category    Category? @relation(fields: [categoryId], references: [id])
 
   // Índices
-  @@index([isActive]) // Para filtrar servicios activos
-  @@map("service")
+  @@index([isActive]) // Para filtrar tipos de falla activos
+  @@index([categoryId]) // Para filtrar por categoría
+  @@map("failure_type")
 }
 
 model CompanyCategory {
@@ -159,6 +163,7 @@ model Category {
   // Relaciones
   reports           Report[]
   companyCategories CompanyCategory[]
+  failureTypes      FailureType[]
 
   // Índices
   @@index([name]) // Para búsquedas por nombre de categoría
@@ -185,7 +190,6 @@ model State {
 // REPORTES
 model Report {
   id                String                                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  title             String                                 @db.VarChar(150)
   description       String?
   location          Unsupported("geometry(Point, 4326)")
   address           String?
@@ -197,7 +201,7 @@ model Report {
   stateId           Int?                                   @map("state_id")
   categoryId        String?                                @map("category_id") @db.Uuid
   companyId         String?                                @map("company_id") @db.Uuid
-  serviceId         String?                                @map("service_id") @db.Uuid
+  failureTypeId     Int?                                   @map("failure_type_id")
   neighborhoodId    Int?                                   @map("neighborhood_id")
   createdAt         DateTime                               @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime                               @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
@@ -208,7 +212,7 @@ model Report {
   state           State?          @relation(fields: [stateId], references: [id])
   category        Category?       @relation(fields: [categoryId], references: [id])
   company         Company?        @relation(fields: [companyId], references: [id])
-  service         Service?        @relation(fields: [serviceId], references: [id])
+  failureType     FailureType?    @relation(fields: [failureTypeId], references: [id])
   neighborhood    Neighborhood?   @relation(fields: [neighborhoodId], references: [id])
   historyChanges  HistoryChange[]
 
@@ -218,6 +222,7 @@ model Report {
   @@index([stateId]) // Para filtrar por estado
   @@index([categoryId]) // Para filtrar por categoría
   @@index([companyId]) // Para reportes por empresa
+  @@index([failureTypeId]) // Para reportes por tipo de falla
   @@index([neighborhoodId]) // Para reportes por barrio
   @@index([priority]) // Para filtrar por prioridad
   @@index([isActive]) // Para filtrar reportes activos

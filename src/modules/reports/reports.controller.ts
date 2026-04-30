@@ -5,33 +5,22 @@ import geocodingService from '../../services/geocoding.service';
 
 export const createReport = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { title, description, latitude, longitude, categoryId, priority } = req.body;
-    const userId = req.user?.userId; // Del middleware de autenticación
+    const { description, latitude, longitude, categoryId, companyId, failureTypeId, assignedManagerId, urlPhoto } = req.body;
+    const userId = req.user?.userId;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Usuario no autenticado'
-      });
+      return res.status(401).json({ success: false, message: 'Usuario no autenticado' });
     }
 
-    // Crear reporte con detección automática de barrio
     const report = await reportsService.createReport({
-      title,
-      description,
-      latitude,
-      longitude,
-      categoryId,
-      userId,
-      priority
+      description, latitude, longitude, categoryId, userId,
+      companyId, failureTypeId, assignedManagerId, urlPhoto
     });
 
     res.status(201).json({
       success: true,
       message: 'Reporte creado exitosamente',
-      data: {
-        report
-      }
+      data: { report }
     });
   } catch (error) {
     if (error instanceof Error) {
@@ -101,7 +90,8 @@ export const getReportsByNeighborhood = async (req: Request, res: Response, next
     
     // Extraer filtros opcionales del query
     const filters = {
-      serviceName: req.query.serviceName as string | undefined,
+      serviceName: undefined as undefined,
+      failureTypeName: req.query.failureTypeName as string | undefined,
       assignedManagerId: req.query.assignedManagerId as string | undefined,
       categoryName: req.query.categoryName as string | undefined,
       stateName: req.query.stateName as string | undefined,
@@ -157,7 +147,7 @@ export const getAllReports = async (req: Request, res: Response, next: NextFunct
       page: req.query.page ? parseInt(req.query.page as string) : 1,
       limit: req.query.limit ? parseInt(req.query.limit as string) : 10,
       neighborhoodName: req.query.neighborhoodName as string | undefined,
-      serviceName: req.query.serviceName as string | undefined,
+      failureTypeName: req.query.failureTypeName as string | undefined,
       assignedManagerId: req.query.assignedManagerId as string | undefined,
       categoryName: req.query.categoryName as string | undefined,
       stateName: req.query.stateName as string | undefined,
@@ -192,7 +182,7 @@ export const getReportsByUser = async (req: Request, res: Response, next: NextFu
     // Extraer filtros opcionales
     const filters = {
       neighborhoodName: req.query.neighborhoodName as string | undefined,
-      serviceName: req.query.serviceName as string | undefined,
+      failureTypeName: req.query.failureTypeName as string | undefined,
       categoryName: req.query.categoryName as string | undefined,
       stateName: req.query.stateName as string | undefined,
       companyName: req.query.companyName as string | undefined,
@@ -265,6 +255,37 @@ export const getAddressFromCoordinates = async (req: Request, res: Response, nex
           countryCode: addressData.countryCode
         }
       }
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+    next(error);
+  }
+};
+
+export const cancelReport = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { reportId } = req.params;
+    const { comment } = req.body;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado'
+      });
+    }
+
+    const report = await reportsService.cancelReport(reportId, userId, comment);
+
+    res.json({
+      success: true,
+      message: 'Reporte cancelado exitosamente',
+      data: { report }
     });
   } catch (error) {
     if (error instanceof Error) {

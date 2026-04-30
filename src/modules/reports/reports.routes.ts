@@ -6,7 +6,8 @@ import {
   getReportById,
   getAllReports,
   getAddressFromCoordinates,
-  getReportsByUser
+  getReportsByUser,
+  cancelReport
 } from './reports.controller';
 import { validateCreateReport, validateDetectNeighborhood, validateReportsFilters } from './reports.validation';
 import { authenticateToken } from '../../middleware/auth.middleware';
@@ -167,7 +168,7 @@ router.post('/get-address', authenticateToken, validateDetectNeighborhood, getAd
  * /api/reports:
  *   post:
  *     summary: Crear un nuevo reporte con detección automática de barrio
- *     description: Crea un reporte y detecta automáticamente el barrio usando las coordenadas GPS
+ *     description: Crea un reporte y detecta automáticamente el barrio usando las coordenadas GPS. El estado se asigna a PENDIENTE automáticamente.
  *     tags: [Reports]
  *     security:
  *       - bearerAuth: []
@@ -178,18 +179,14 @@ router.post('/get-address', authenticateToken, validateDetectNeighborhood, getAd
  *           schema:
  *             type: object
  *             required:
- *               - title
  *               - description
  *               - latitude
  *               - longitude
  *               - categoryId
  *             properties:
- *               title:
- *                 type: string
- *                 example: Fuga de agua en la calle principal
  *               description:
  *                 type: string
- *                 example: Hay una fuga de agua considerable
+ *                 example: Hay una fuga de agua considerable en la esquina
  *               latitude:
  *                 type: number
  *                 example: 8.2889
@@ -199,17 +196,73 @@ router.post('/get-address', authenticateToken, validateDetectNeighborhood, getAd
  *               categoryId:
  *                 type: string
  *                 format: uuid
+ *                 description: ID de la categoría del reporte
+ *               companyId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: ID de la empresa responsable (opcional)
+ *               serviceId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: ID del tipo de servicio/avería (opcional)
+ *               assignedManagerId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: ID del responsable asignado (opcional)
+ *               urlPhoto:
+ *                 type: string
+ *                 format: uri
+ *                 description: URL de la imagen del reporte (opcional)
  *               priority:
  *                 type: string
  *                 enum: [BAJA, MEDIA, ALTA]
  *                 default: MEDIA
+ *                 description: Prioridad del reporte (opcional, por defecto MEDIA)
  *     responses:
  *       201:
- *         description: Reporte creado exitosamente
+ *         description: Reporte creado exitosamente con estado PENDIENTE
  *       401:
  *         description: No autenticado
  */
 router.post('/', authenticateToken, validateCreateReport, createReport);
+
+/**
+ * @swagger
+ * /api/reports/cancel/{reportId}:
+ *   patch:
+ *     summary: Cancelar un reporte
+ *     description: Cambia el estado de un reporte a CANCELADO y registra el cambio en el historial
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: reportId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID del reporte a cancelar
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               comment:
+ *                 type: string
+ *                 example: El problema fue resuelto antes de atenderlo
+ *                 description: Comentario opcional sobre la cancelación
+ *     responses:
+ *       200:
+ *         description: Reporte cancelado exitosamente
+ *       400:
+ *         description: El reporte ya está cancelado o no existe
+ *       401:
+ *         description: No autenticado
+ */
+router.patch('/cancel/:reportId', authenticateToken, cancelReport);
 
 /**
  * @swagger

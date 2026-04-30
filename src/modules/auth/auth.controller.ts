@@ -86,12 +86,13 @@ export const getUserByEmail = async (req: Request, res: Response, next: NextFunc
 
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { page = '1', limit = '10', role } = req.query;
+    const { page = '1', limit = '10', role, companyName } = req.query;
     
     const users = await authService.getAllUsers({
       page: parseInt(page as string),
       limit: parseInt(limit as string),
-      role: role as string
+      role: role as string,
+      companyName: companyName as string
     });
 
     res.json({

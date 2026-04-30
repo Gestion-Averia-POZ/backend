@@ -112,21 +112,27 @@ class AuthService {
     };
   }
 
-  async getAllUsers(options: { page: number; limit: number; role?: string }) {
-    const { page, limit, role } = options;
+  async getAllUsers(options: { page: number; limit: number; role?: string; companyName?: string }) {
+    const { page, limit, role, companyName } = options;
     const skip = (page - 1) * limit;
 
-    // Siempre filtrar solo usuarios activos
-    const where = role 
-      ? { role: { name: role }, isActive: true } 
-      : { isActive: true };
+    // Construir filtro dinámicamente
+    const where: any = { isActive: true };
+
+    if (role) {
+      where.role = { name: { contains: role, mode: 'insensitive' } };
+    }
+
+    if (companyName) {
+      where.company = { name: { contains: companyName, mode: 'insensitive' } };
+    }
 
     const [users, total] = await Promise.all([
       authRepository.findManyUsers({
         skip,
         take: limit,
         where,
-        include: { role: true }
+        include: { role: true, company: true }
       }),
       authRepository.countUsers(where)
     ]);
@@ -138,6 +144,7 @@ class AuthService {
       email: user.email,
       phoneNumber: user.phoneNumber,
       role: user.role?.name,
+      company: user.company ? { id: user.company.id, name: user.company.name } : null,
       isActive: user.isActive,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt

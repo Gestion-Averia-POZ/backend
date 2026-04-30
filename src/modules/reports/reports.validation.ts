@@ -4,14 +4,6 @@ import { validate } from '../../middleware/validate.middleware';
 // Validación para crear reporte
 export const createReportSchema = z.object({
   body: z.object({
-    title: z
-      .string({
-        required_error: 'El título es requerido',
-        invalid_type_error: 'El título debe ser una cadena de texto'
-      })
-      .min(5, 'El título debe tener al menos 5 caracteres')
-      .max(100, 'El título no puede exceder 100 caracteres')
-      .trim(),
     description: z
       .string({
         required_error: 'La descripción es requerida',
@@ -40,14 +32,22 @@ export const createReportSchema = z.object({
         invalid_type_error: 'La categoría debe ser una cadena de texto'
       })
       .uuid('ID de categoría inválido'),
-    priority: z
-      .enum(['BAJA', 'MEDIA', 'ALTA'], {
-        invalid_type_error: 'La prioridad debe ser BAJA, MEDIA o ALTA'
-      })
-      .optional()
-      .default('MEDIA'),
-    images: z
-      .array(z.string().url('URL de imagen inválida'))
+    companyId: z
+      .string()
+      .uuid('ID de empresa inválido')
+      .optional(),
+    failureTypeId: z
+      .number()
+      .int('El ID de tipo de falla debe ser un número entero')
+      .positive('El ID de tipo de falla debe ser positivo')
+      .optional(),
+    assignedManagerId: z
+      .string()
+      .uuid('ID de responsable inválido')
+      .optional(),
+    urlPhoto: z
+      .string()
+      .url('URL de imagen inválida')
       .optional()
   })
 });
@@ -86,7 +86,7 @@ export const reportsFiltersSchema = z.object({
     neighborhoodName: z
       .string()
       .optional(),
-    serviceName: z
+    failureTypeName: z
       .string()
       .optional(),
     assignedManagerId: z
