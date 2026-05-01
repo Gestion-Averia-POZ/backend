@@ -206,6 +206,45 @@ export const getReportsByUser = async (req: Request, res: Response, next: NextFu
   }
 };
 
+export const getAssignedReports = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado'
+      });
+    }
+
+    // Extraer filtros opcionales
+    const filters = {
+      neighborhoodName: req.query.neighborhoodName as string | undefined,
+      failureTypeName: req.query.failureTypeName as string | undefined,
+      categoryName: req.query.categoryName as string | undefined,
+      stateName: req.query.stateName as string | undefined,
+      companyName: req.query.companyName as string | undefined,
+      priority: req.query.priority as 'BAJA' | 'MEDIA' | 'ALTA' | undefined,
+      reportState: req.query.reportState as 'PENDIENTE' | 'EN_PROCESO' | 'COMPLETADO' | 'CANCELADO' | undefined
+    };
+
+    const reports = await reportsService.getAssignedReports(userId, filters);
+
+    res.json({
+      success: true,
+      message: 'Reportes asignados obtenidos exitosamente',
+      data: {
+        reports,
+        count: reports.length,
+        filters
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 export const getAddressFromCoordinates = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { latitude, longitude } = req.body;
@@ -297,3 +336,25 @@ export const cancelReport = async (req: Request, res: Response, next: NextFuncti
     next(error);
   }
 };
+
+export const deleteReport = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { reportId } = req.params;
+
+    await reportsService.deleteReport(reportId);
+
+    res.json({
+      success: true,
+      message: 'Reporte eliminado permanentemente'
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+    next(error);
+  }
+};
+

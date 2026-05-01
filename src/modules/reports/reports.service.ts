@@ -214,6 +214,32 @@ class ReportsService {
   }
 
   /**
+   * Eliminar un reporte permanentemente si está cancelado o no tiene responsable asignado
+   */
+  async deleteReport(reportId: string) {
+    const report = await prisma.report.findFirst({
+      where: { id: reportId },
+      include: { state: { select: { name: true } } }
+    });
+
+    if (!report) {
+      throw new Error('Reporte no encontrado');
+    }
+
+    const isCancelled = report.state?.name === 'CANCELADO';
+    const hasNoManager = !report.assignedManagerId;
+
+    if (isCancelled || hasNoManager) {
+      return await prisma.report.delete({
+        where: { id: reportId }
+      });
+    }
+
+    throw new Error('Solo se pueden eliminar reportes cancelados o sin responsable asignado');
+  }
+
+
+  /**
    * Obtener todos los reportes (con paginación y filtros por nombre)
    */
   async getAllReports(filters: ReportsFilters) {
@@ -272,6 +298,25 @@ class ReportsService {
       orderBy: { createdAt: 'desc' }
     });
   }
+
+  /**
+   * Obtener reportes asignados a un usuario específico
+   */
+  async getAssignedReports(managerId: string, filters?: Omit<ReportsFilters, 'page' | 'limit' | 'assignedManagerId'>) {
+    const where: any = { assignedManagerId: managerId, isActive: true };
+    this._applyFilters(where, filters);
+
+    if (filters?.neighborhoodName) {
+      where.neighborhood = { name: { contains: filters.neighborhoodName, mode: 'insensitive' } };
+    }
+
+    return await prisma.report.findMany({
+      where,
+      include: REPORT_INCLUDE,
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
 
   /**
    * Aplica los filtros comunes al objeto where de Prisma

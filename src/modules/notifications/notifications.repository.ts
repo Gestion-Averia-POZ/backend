@@ -8,6 +8,13 @@ class NotificationsRepository {
     });
   }
 
+  async findUnreadByUserId(userId: string) {
+    return await prisma.notification.findMany({
+      where: { userId, isRead: false },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
   async markAsRead(id: string) {
     return await prisma.notification.update({
       where: { id },
@@ -25,6 +32,12 @@ class NotificationsRepository {
   async findById(id: string) {
     return await prisma.notification.findUnique({
       where: { id }
+    });
+  }
+
+  async createMany(data: any[]) {
+    return await prisma.notification.createMany({
+      data
     });
   }
 }

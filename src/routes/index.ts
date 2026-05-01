@@ -6,6 +6,8 @@ import { categoriesRoutes } from '../modules/categories';
 import { companiesRoutes } from '../modules/companies';
 import { failureTypeRoutes } from '../modules/failure-types';
 import { notificationsRoutes } from '../modules/notifications';
+import { usersRoutes } from '../modules/users';
+import { requestsRoutes } from '../modules/requests';
 import healthRoutes from './health.routes';
 
 const router = Router();
@@ -17,6 +19,8 @@ router.use('/categories', categoriesRoutes);
 router.use('/companies', companiesRoutes);
 router.use('/failure-types', failureTypeRoutes);
 router.use('/notifications', notificationsRoutes);
+router.use('/users', usersRoutes);
+router.use('/requests', requestsRoutes);
 router.use('/health', healthRoutes);
 
 export default router;

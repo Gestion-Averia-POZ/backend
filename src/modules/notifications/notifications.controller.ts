@@ -44,3 +44,19 @@ export const markAllAsRead = async (req: Request, res: Response, next: NextFunct
     next(error);
   }
 };
+
+export const getUnreadNotifications = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { userId } = req.params;
+    const notifications = await notificationsService.getUnreadByUserId(userId);
+    res.status(200).json({
+      success: true,
+      data: {
+        notifications
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

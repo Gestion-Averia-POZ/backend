@@ -2,8 +2,10 @@ import { Router } from 'express';
 import {
   getNotificationsByUser,
   markAsRead,
-  markAllAsRead
+  markAllAsRead,
+  getUnreadNotifications
 } from './notifications.controller';
+
 import { validateUserId, validateNotificationId } from './notifications.validation';
 import { authenticateToken } from '../../middleware/auth.middleware';
 
@@ -78,5 +80,26 @@ router.patch('/:id/read', authenticateToken, validateNotificationId, markAsRead)
  *         description: Notificaciones actualizadas
  */
 router.patch('/user/:userId/read-all', authenticateToken, validateUserId, markAllAsRead);
+/**
+ * @swagger
+ * /api/notifications/user/{userId}/unread:
+ *   get:
+ *     summary: Obtener notificaciones no leídas de un usuario
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Lista de notificaciones no leídas
+ */
+router.get('/user/:userId/unread', authenticateToken, validateUserId, getUnreadNotifications);
 
 export default router;
+

@@ -76,6 +76,7 @@ model User {
   assignedReports     Report[]        @relation("AssignedManager")
   historyChanges      HistoryChange[]
   notifications       Notification[]
+  requests            Request[]
 
   // Índices para optimizar consultas
   @@index([email]) // Ya existe como unique, pero explícito
@@ -180,6 +181,7 @@ model State {
 
   // Relaciones
   reports              Report[]
+  requests             Request[]
   historyChangesPrev   HistoryChange[] @relation("PreviousState")
   historyChangesNew    HistoryChange[] @relation("NewState")
 
@@ -278,4 +280,32 @@ model Notification {
   @@index([isRead])
   @@index([createdAt])
   @@map("notifications")
+}
+
+// SOLICITUDES (REQUESTS)
+enum RequestType {
+  REGISTRO
+  DUDA
+  BUG
+}
+
+model Request {
+  id            String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  applicantName String      @map("applicant_name") @db.VarChar(150)
+  type          RequestType
+  description   String      @db.Text
+  stateId       Int?        @map("state_id")
+  userId        String?     @map("user_id") @db.Uuid
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relaciones
+  state State? @relation(fields: [stateId], references: [id])
+  user  User?  @relation(fields: [userId], references: [id])
+
+  // Índices
+  @@index([stateId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("requests")
 }

@@ -7,8 +7,12 @@ import {
   getAllReports,
   getAddressFromCoordinates,
   getReportsByUser,
-  cancelReport
+  cancelReport,
+  getAssignedReports,
+  deleteReport
 } from './reports.controller';
+
+
 import { validateCreateReport, validateDetectNeighborhood, validateReportsFilters } from './reports.validation';
 import { authenticateToken } from '../../middleware/auth.middleware';
 
@@ -484,4 +488,58 @@ router.get('/:reportId', authenticateToken, getReportById);
  */
 router.get('/neighborhood/:neighborhoodId', authenticateToken, getReportsByNeighborhood);
 
+/**
+ * @swagger
+ * /api/reports/assigned:
+ *   get:
+ *     summary: Obtener reportes asignados al usuario autenticado
+ *     description: Lista todos los reportes donde el usuario actual es el responsable asignado
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: neighborhoodName
+ *         schema: { type: string }
+ *       - in: query
+ *         name: categoryName
+ *         schema: { type: string }
+ *       - in: query
+ *         name: priority
+ *         schema: { type: string, enum: [BAJA, MEDIA, ALTA] }
+ *       - in: query
+ *         name: reportState
+ *         schema: { type: string, enum: [PENDIENTE, EN_PROCESO, COMPLETADO, CANCELADO] }
+ *     responses:
+ *       200:
+ *         description: Reportes asignados obtenidos
+ */
+router.get('/assigned', authenticateToken, getAssignedReports);
+
+/**
+ * @swagger
+ * /api/reports/{reportId}:
+ *   delete:
+ *     summary: Eliminar un reporte permanentemente
+ *     description: Solo permite eliminar si el reporte está CANCELADO o si no tiene un responsable asignado.
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: reportId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Reporte eliminado exitosamente
+ *       400:
+ *         description: No cumple las condiciones para ser eliminado
+ */
+router.delete('/:reportId', authenticateToken, deleteReport);
+
 export default router;
+
+
