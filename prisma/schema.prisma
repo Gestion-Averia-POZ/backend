@@ -75,6 +75,7 @@ model User {
   reports             Report[]        @relation("UserReports")
   assignedReports     Report[]        @relation("AssignedManager")
   historyChanges      HistoryChange[]
+  notifications       Notification[]
 
   // Índices para optimizar consultas
   @@index([email]) // Ya existe como unique, pero explícito
@@ -256,4 +257,25 @@ model HistoryChange {
   @@index([createdAt]) // Para ordenar por fecha
   @@index([reportId, createdAt]) // Índice compuesto para historial ordenado
   @@map("history_change")
+}
+
+// NOTIFICACIONES
+model Notification {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  title       String   @db.VarChar(255)
+  description String   @db.Text
+  type        String   @db.VarChar(50) // e.g., 'STATUS_CHANGE', 'REPORT_CANCELLED'
+  isRead      Boolean  @default(false) @map("is_read")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relaciones
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Índices
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
 }
