@@ -201,18 +201,66 @@ class AuthService {
     };
   }
 
-  async deleteUser(id: string) {
-    // Verificar que el usuario existe
-    const existingUser = await authRepository.findById(id);
+  async deactivateAnyUser(id: string) {
+    const existingUser = await authRepository.findByIdAnyStatus(id);
     if (!existingUser) {
       throw new Error('Usuario no encontrado');
     }
+    await authRepository.setUserActiveStatus(id, false);
+  }
 
-    // Eliminar usuario 
-    await authRepository.updateUser(id, { isActive: false });
-    
-    // O eliminar completamente (hard delete)
-    // await authRepository.deleteUser(id);
+  async activateAnyUser(id: string) {
+    const existingUser = await authRepository.findByIdAnyStatus(id);
+    if (!existingUser) {
+      throw new Error('Usuario no encontrado');
+    }
+    await authRepository.setUserActiveStatus(id, true);
+  }
+
+  async deleteUserPermanently(id: string) {
+    const existingUser = await authRepository.findByIdAnyStatus(id);
+    if (!existingUser) {
+      throw new Error('Usuario no encontrado');
+    }
+    await authRepository.deleteUserPermanently(id);
+  }
+
+  async deactivateWorker(id: string, companyUserId: string) {
+    const companyUser = await authRepository.findByIdAnyStatus(companyUserId);
+    if (!companyUser || !companyUser.companyId) {
+      throw new Error('No estás asociado a una compañía');
+    }
+
+    const existingUser = await authRepository.findByIdAnyStatus(id);
+    if (!existingUser) {
+      throw new Error('Usuario no encontrado');
+    }
+    if (existingUser.role?.name !== 'WORKER') {
+      throw new Error('El usuario no es un empleado');
+    }
+    if (existingUser.companyId !== companyUser.companyId) {
+      throw new Error('El empleado no pertenece a tu compañía');
+    }
+    await authRepository.setUserActiveStatus(id, false);
+  }
+
+  async activateWorker(id: string, companyUserId: string) {
+    const companyUser = await authRepository.findByIdAnyStatus(companyUserId);
+    if (!companyUser || !companyUser.companyId) {
+      throw new Error('No estás asociado a una compañía');
+    }
+
+    const existingUser = await authRepository.findByIdAnyStatus(id);
+    if (!existingUser) {
+      throw new Error('Usuario no encontrado');
+    }
+    if (existingUser.role?.name !== 'WORKER') {
+      throw new Error('El usuario no es un empleado');
+    }
+    if (existingUser.companyId !== companyUser.companyId) {
+      throw new Error('El empleado no pertenece a tu compañía');
+    }
+    await authRepository.setUserActiveStatus(id, true);
   }
 
   async resetPassword(email: string, newPassword: string) {

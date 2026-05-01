@@ -48,6 +48,9 @@ export const createReportSchema = z.object({
     urlPhoto: z
       .string()
       .url('URL de imagen inválida')
+      .optional(),
+    address: z
+      .string()
       .optional()
   })
 });

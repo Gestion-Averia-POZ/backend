@@ -5,7 +5,7 @@ import geocodingService from '../../services/geocoding.service';
 
 export const createReport = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { description, latitude, longitude, categoryId, companyId, failureTypeId, assignedManagerId, urlPhoto } = req.body;
+    const { description, latitude, longitude, categoryId, companyId, failureTypeId, assignedManagerId, urlPhoto, address } = req.body;
     const userId = req.user?.userId;
 
     if (!userId) {
@@ -14,7 +14,7 @@ export const createReport = async (req: Request, res: Response, next: NextFuncti
 
     const report = await reportsService.createReport({
       description, latitude, longitude, categoryId, userId,
-      companyId, failureTypeId, assignedManagerId, urlPhoto
+      companyId, failureTypeId, assignedManagerId, urlPhoto, address
     });
 
     res.status(201).json({

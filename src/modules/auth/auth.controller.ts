@@ -121,15 +121,67 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
   }
 };
 
-export const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
+export const deactivateAnyUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    
-    await authService.deleteUser(id);
-
+    await authService.deactivateAnyUser(id);
     res.json({
       success: true,
-      message: 'Usuario eliminado exitosamente'
+      message: 'Usuario desactivado exitosamente'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const activateAnyUser = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    await authService.activateAnyUser(id);
+    res.json({
+      success: true,
+      message: 'Usuario activado exitosamente'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteUserPermanently = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    await authService.deleteUserPermanently(id);
+    res.json({
+      success: true,
+      message: 'Usuario eliminado permanentemente'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deactivateWorker = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params; // worker id
+    const companyUserId = req.user!.userId;
+    await authService.deactivateWorker(id, companyUserId);
+    res.json({
+      success: true,
+      message: 'Empleado desactivado exitosamente'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const activateWorker = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params; // worker id
+    const companyUserId = req.user!.userId;
+    await authService.activateWorker(id, companyUserId);
+    res.json({
+      success: true,
+      message: 'Empleado activado exitosamente'
     });
   } catch (error) {
     next(error);

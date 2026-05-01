@@ -11,6 +11,7 @@ interface CreateReportData {
   failureTypeId?: number;
   assignedManagerId?: string;
   urlPhoto?: string;
+  address?: string;
 }
 
 interface ReportsFilters {
@@ -86,6 +87,7 @@ class ReportsService {
           id,
           description,
           location,
+          address,
           category_id,
           user_id,
           neighborhood_id,
@@ -102,6 +104,7 @@ class ReportsService {
           gen_random_uuid(),
           ${data.description},
           ST_SetSRID(ST_MakePoint(${data.longitude}, ${data.latitude}), 4326),
+          ${data.address ?? null},
           CAST(${data.categoryId} AS UUID),
           CAST(${data.userId} AS UUID),
           ${neighborhoodId},

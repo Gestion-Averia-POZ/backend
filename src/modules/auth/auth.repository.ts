@@ -49,6 +49,16 @@ class AuthRepository {
     });
   }
 
+  async findByIdAnyStatus(id: string) {
+    return await prisma.user.findUnique({
+      where: { id },
+      include: {
+        role: true,
+        company: true
+      }
+    });
+  }
+
   async findManyUsers(options: any) {
     return await prisma.user.findMany({
       ...options,
@@ -79,9 +89,16 @@ class AuthRepository {
     });
   }
 
-  async deleteUser(id: string) {
+  async deleteUserPermanently(id: string) {
     return await prisma.user.delete({
       where: { id }
+    });
+  }
+
+  async setUserActiveStatus(id: string, isActive: boolean) {
+    return await prisma.user.update({
+      where: { id },
+      data: { isActive }
     });
   }
 

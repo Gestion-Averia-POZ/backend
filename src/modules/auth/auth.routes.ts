@@ -1,7 +1,10 @@
 import { Router } from 'express';
-import { register, login, checkEmail, getUserById, getUserByEmail, getAllUsers, updateUser, deleteUser } from './auth.controller';
+import { 
+  register, login, checkEmail, getUserById, getUserByEmail, getAllUsers, updateUser, 
+  deactivateAnyUser, activateAnyUser, deleteUserPermanently, deactivateWorker, activateWorker 
+} from './auth.controller';
 import { validateRegister, validateLogin, validateUpdateUser } from './auth.validation';
-import { authenticateToken } from '../../middleware/auth.middleware';
+import { authenticateToken, requireRole } from '../../middleware/auth.middleware';
 
 const router = Router();
 
@@ -409,6 +412,110 @@ router.patch('/user/:id', authenticateToken, validateUpdateUser, updateUser);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.delete('/user/:id', authenticateToken, deleteUser);
+
+/**
+ * @swagger
+ * /api/auth/user/{id}:
+ *   delete:
+ *     summary: Eliminar permanentemente a un usuario (Solo ADMIN)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Usuario eliminado permanentemente
+ */
+router.delete('/user/:id', authenticateToken, requireRole(['ADMIN']), deleteUserPermanently);
+
+/**
+ * @swagger
+ * /api/auth/user/{id}/deactivate:
+ *   patch:
+ *     summary: Desactivar usuario (Solo ADMIN)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Usuario desactivado
+ */
+router.patch('/user/:id/deactivate', authenticateToken, requireRole(['ADMIN']), deactivateAnyUser);
+
+/**
+ * @swagger
+ * /api/auth/user/{id}/activate:
+ *   patch:
+ *     summary: Activar usuario (Solo ADMIN)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Usuario activado
+ */
+router.patch('/user/:id/activate', authenticateToken, requireRole(['ADMIN']), activateAnyUser);
+
+/**
+ * @swagger
+ * /api/auth/worker/{id}/deactivate:
+ *   patch:
+ *     summary: Desactivar empleado (Solo COMPANY)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Empleado desactivado
+ */
+router.patch('/worker/:id/deactivate', authenticateToken, requireRole(['COMPANY']), deactivateWorker);
+
+/**
+ * @swagger
+ * /api/auth/worker/{id}/activate:
+ *   patch:
+ *     summary: Activar empleado (Solo COMPANY)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Empleado activado
+ */
+router.patch('/worker/:id/activate', authenticateToken, requireRole(['COMPANY']), activateWorker);
 
 export default router;

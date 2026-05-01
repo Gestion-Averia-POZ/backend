@@ -212,6 +212,10 @@ router.post('/get-address', authenticateToken, validateDetectNeighborhood, getAd
  *                 type: string
  *                 format: uri
  *                 description: URL de la imagen del reporte (opcional)
+ *               address:
+ *                 type: string
+ *                 example: Avenida Principal #123, Villa Asia
+ *                 description: Dirección opcional del reporte
  *     responses:
  *       201:
  *         description: Reporte creado exitosamente con estado PENDIENTE

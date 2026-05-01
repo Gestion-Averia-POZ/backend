@@ -186,14 +186,20 @@ const options = {
       {
         name: 'Reports',
         description: 'Report management with automatic neighborhood detection using PostGIS'
+      },
+      {
+        name: 'Categories',
+        description: 'Category management operations'
+      },
+      {
+        name: 'Companies',
+        description: 'Company management operations'
       }
     ]
   },
   apis: [
     './src/routes/*.ts',
-    './src/modules/*/auth.routes.ts',
-    './src/modules/*/otp.routes.ts',
-    './src/modules/*/reports.routes.ts'
+    './src/modules/*/*.routes.ts'
   ]
 };
 
