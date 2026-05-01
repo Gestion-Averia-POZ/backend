@@ -201,10 +201,9 @@ router.post('/get-address', authenticateToken, validateDetectNeighborhood, getAd
  *                 type: string
  *                 format: uuid
  *                 description: ID de la empresa responsable (opcional)
- *               serviceId:
- *                 type: string
- *                 format: uuid
- *                 description: ID del tipo de servicio/avería (opcional)
+ *               failureTypeId:
+ *                 type: integer
+ *                 description: ID del tipo de falla/avería (opcional)
  *               assignedManagerId:
  *                 type: string
  *                 format: uuid
@@ -213,11 +212,6 @@ router.post('/get-address', authenticateToken, validateDetectNeighborhood, getAd
  *                 type: string
  *                 format: uri
  *                 description: URL de la imagen del reporte (opcional)
- *               priority:
- *                 type: string
- *                 enum: [BAJA, MEDIA, ALTA]
- *                 default: MEDIA
- *                 description: Prioridad del reporte (opcional, por defecto MEDIA)
  *     responses:
  *       201:
  *         description: Reporte creado exitosamente con estado PENDIENTE
