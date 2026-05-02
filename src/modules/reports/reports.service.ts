@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import prisma from '../../config/prisma';
 import geolocationService from '../../services/geolocation.service';
 
@@ -127,6 +128,11 @@ class ReportsService {
         include: REPORT_INCLUDE
       });
 
+      if (createdReport) {
+        (createdReport as any).latitude = data.latitude;
+        (createdReport as any).longitude = data.longitude;
+      }
+
       return createdReport;
     } catch (error) {
       console.error('Error creando reporte:', error);
@@ -145,18 +151,20 @@ class ReportsService {
 
     this._applyFilters(where, filters);
 
-    return await prisma.report.findMany({
+    const reports = await prisma.report.findMany({
       where,
       include: REPORT_INCLUDE,
       orderBy: { createdAt: 'desc' }
     });
+
+    return await this._attachCoordinates(reports);
   }
 
   /**
    * Obtener un reporte por ID (incluye historial de cambios)
    */
   async getReportById(reportId: string) {
-    return await prisma.report.findFirst({
+    const report = await prisma.report.findFirst({
       where: { id: reportId, isActive: true },
       include: {
         ...REPORT_INCLUDE,
@@ -170,6 +178,8 @@ class ReportsService {
         }
       }
     });
+
+    return await this._attachCoordinates(report);
   }
 
   /**
@@ -210,7 +220,7 @@ class ReportsService {
       })
     ]);
 
-    return updatedReport;
+    return await this._attachCoordinates(updatedReport);
   }
 
   /**
@@ -265,6 +275,8 @@ class ReportsService {
       prisma.report.count({ where })
     ]);
 
+    await this._attachCoordinates(reports);
+
     return {
       reports,
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
@@ -292,11 +304,13 @@ class ReportsService {
       where.neighborhood = { name: { contains: filters.neighborhoodName, mode: 'insensitive' } };
     }
 
-    return await prisma.report.findMany({
+    const reports = await prisma.report.findMany({
       where,
       include: REPORT_INCLUDE,
       orderBy: { createdAt: 'desc' }
     });
+
+    return await this._attachCoordinates(reports);
   }
 
   /**
@@ -310,11 +324,13 @@ class ReportsService {
       where.neighborhood = { name: { contains: filters.neighborhoodName, mode: 'insensitive' } };
     }
 
-    return await prisma.report.findMany({
+    const reports = await prisma.report.findMany({
       where,
       include: REPORT_INCLUDE,
       orderBy: { createdAt: 'desc' }
     });
+
+    return await this._attachCoordinates(reports);
   }
 
 
@@ -345,6 +361,43 @@ class ReportsService {
     if (filters.reportState) {
       where.state = { name: filters.reportState };
     }
+  }
+
+  /**
+   * Extrae latitude y longitude de la columna location (geometry) y las adjunta a los reportes
+   */
+  private async _attachCoordinates(reports: any | any[]) {
+    if (!reports) return reports;
+
+    const isArray = Array.isArray(reports);
+    if (isArray && reports.length === 0) return reports;
+
+    const reportsArray = isArray ? reports : [reports];
+    const reportIds = reportsArray.map(r => r.id);
+
+    try {
+      // Extraer coordenadas usando PostGIS (Casteamos id a text para evitar error de tipos con UUID)
+      const coordinates = await prisma.$queryRaw<Array<{ id: string, latitude: number, longitude: number }>>`
+        SELECT id, ST_Y(location) as latitude, ST_X(location) as longitude 
+        FROM report 
+        WHERE id::text IN (${Prisma.join(reportIds)})
+      `;
+
+      const coordsMap = new Map(coordinates.map(c => [c.id, { latitude: c.latitude, longitude: c.longitude }]));
+
+      reportsArray.forEach(r => {
+        const coords = coordsMap.get(r.id);
+        if (coords) {
+          r.latitude = coords.latitude;
+          r.longitude = coords.longitude;
+        }
+      });
+    } catch (error) {
+      console.error('Error al extraer coordenadas:', error);
+      // No bloqueamos la respuesta si falla la extracción, solo registramos el error
+    }
+
+    return reports;
   }
 }
 
