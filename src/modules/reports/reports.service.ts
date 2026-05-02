@@ -227,6 +227,40 @@ class ReportsService {
   }
 
   /**
+   * Actualizar campos básicos de un reporte (Restringido a descripción, tipo de avería y foto)
+   */
+  async updateReport(reportId: string, userId: string, data: { description?: string, failureTypeId?: number, urlPhoto?: string }) {
+    const report = await prisma.report.findFirst({
+      where: { id: reportId, isActive: true }
+    });
+
+    if (!report) throw new Error('Reporte no encontrado');
+
+    // Preparar datos de actualización (solo los permitidos)
+    const updateData: any = {};
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.failureTypeId !== undefined) updateData.failureTypeId = data.failureTypeId;
+    if (data.urlPhoto !== undefined) updateData.urlPhoto = data.urlPhoto;
+
+    const [updatedReport] = await prisma.$transaction([
+      prisma.report.update({
+        where: { id: reportId },
+        data: updateData,
+        include: REPORT_INCLUDE
+      }),
+      prisma.historyChange.create({
+        data: {
+          reportId,
+          userId,
+          comment: 'Información del reporte actualizada (descripción/tipo/foto)'
+        }
+      })
+    ]);
+
+    return await this._attachCoordinates(updatedReport);
+  }
+
+  /**
    * Asignar un trabajador a un reporte
    */
   async assignWorker(reportId: string, workerId: string, managerId: string) {

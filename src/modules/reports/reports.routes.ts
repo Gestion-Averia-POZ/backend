@@ -7,6 +7,7 @@ import {
   getAllReports,
   getAddressFromCoordinates,
   getReportsByUser,
+  updateReport,
   updateReportStatus,
   assignWorker,
   getAssignedReports,
@@ -446,6 +447,50 @@ router.get('/', authenticateToken, validateReportsFilters, getAllReports);
  *         description: No autenticado
  */
 router.get('/user/:userId', authenticateToken, getReportsByUser);
+
+/**
+ * @swagger
+ * /api/reports/{reportId}:
+ *   patch:
+ *     summary: Actualizar campos básicos de un reporte
+ *     description: Permite editar solo la descripción, el tipo de falla y la URL de la foto. Otros campos como categoría, empresa o ubicación no son editables una vez creado el reporte.
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: reportId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID del reporte a actualizar
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               description:
+ *                 type: string
+ *                 example: "Se ha agravado la fuga, ahora sale más agua"
+ *               failureTypeId:
+ *                 type: integer
+ *                 example: 2
+ *               urlPhoto:
+ *                 type: string
+ *                 format: uri
+ *                 example: "https://bucket.com/photo.jpg"
+ *     responses:
+ *       200:
+ *         description: Reporte actualizado exitosamente
+ *       400:
+ *         description: Datos inválidos o reporte no encontrado
+ *       401:
+ *         description: No autenticado
+ */
+router.patch('/:reportId', authenticateToken, updateReport);
 
 /**
  * @swagger

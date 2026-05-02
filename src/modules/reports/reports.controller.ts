@@ -245,6 +245,41 @@ export const getAssignedReports = async (req: Request, res: Response, next: Next
 };
 
 
+export const updateReport = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { reportId } = req.params;
+    const { description, failureTypeId, urlPhoto } = req.body;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado'
+      });
+    }
+
+    const report = await reportsService.updateReport(reportId, userId, {
+      description,
+      failureTypeId,
+      urlPhoto
+    });
+
+    res.json({
+      success: true,
+      message: 'Reporte actualizado exitosamente',
+      data: { report }
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+    next(error);
+  }
+};
+
 export const getAddressFromCoordinates = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { latitude, longitude } = req.body;
