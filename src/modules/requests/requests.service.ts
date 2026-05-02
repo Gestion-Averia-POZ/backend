@@ -4,14 +4,14 @@ import { RequestType } from '@prisma/client';
 
 class RequestsService {
   async createRequest(data: any, userId?: string) {
-    // Buscar o crear el estado PENDIENTE
+    // Buscar o crear el estado EN_PROCESO 
     let state = await prisma.state.findFirst({
-      where: { name: 'PENDIENTE' }
+      where: { name: 'EN_PROCESO' }
     });
 
     if (!state) {
       state = await prisma.state.create({
-        data: { name: 'PENDIENTE', colorHex: '#FFA500' }
+        data: { name: 'EN_PROCESO', colorHex: '#FFA500' }
       });
     }
 
@@ -82,7 +82,7 @@ class RequestsService {
   }
 
   async updateRequestState(id: string, stateName: string) {
-    // Buscar el estado (PENDIENTE, APROBADO, CANCELADO)
+    // Buscar el estado (EN_PROCESO, APROBADO, CANCELADO)
     let state = await prisma.state.findFirst({
       where: { name: stateName }
     });
@@ -90,7 +90,7 @@ class RequestsService {
     if (!state) {
       // Si no existe, lo creamos (aunque idealmente deberían estar en el seed)
       const colorMap: { [key: string]: string } = {
-        'PENDIENTE': '#FFA500',
+        'EN_PROCESO': '#FFA500',
         'APROBADO': '#00AA00',
         'CANCELADO': '#CC0000'
       };

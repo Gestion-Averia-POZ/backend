@@ -306,10 +306,10 @@ export const getAddressFromCoordinates = async (req: Request, res: Response, nex
   }
 };
 
-export const cancelReport = async (req: Request, res: Response, next: NextFunction) => {
+export const updateReportStatus = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { reportId } = req.params;
-    const { comment } = req.body;
+    const { stateName } = req.body;
     const userId = req.user?.userId;
 
     if (!userId) {
@@ -319,11 +319,56 @@ export const cancelReport = async (req: Request, res: Response, next: NextFuncti
       });
     }
 
-    const report = await reportsService.cancelReport(reportId, userId, comment);
+    if (!stateName) {
+      return res.status(400).json({
+        success: false,
+        message: 'El nombre del estado es requerido'
+      });
+    }
+
+    const report = await reportsService.updateReportStatus(reportId, userId, stateName);
 
     res.json({
       success: true,
-      message: 'Reporte cancelado exitosamente',
+      message: `Estado del reporte actualizado a ${stateName} exitosamente`,
+      data: { report }
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+    next(error);
+  }
+};
+
+export const assignWorker = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { reportId } = req.params;
+    const { workerId } = req.body;
+    const managerId = req.user?.userId;
+
+    if (!managerId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado'
+      });
+    }
+
+    if (!workerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'El ID del trabajador es requerido'
+      });
+    }
+
+    const report = await reportsService.assignWorker(reportId, workerId, managerId);
+
+    res.json({
+      success: true,
+      message: 'Trabajador asignado exitosamente al reporte',
       data: { report }
     });
   } catch (error) {

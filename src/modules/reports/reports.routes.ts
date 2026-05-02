@@ -7,7 +7,8 @@ import {
   getAllReports,
   getAddressFromCoordinates,
   getReportsByUser,
-  cancelReport,
+  updateReportStatus,
+  assignWorker,
   getAssignedReports,
   deleteReport
 } from './reports.controller';
@@ -230,10 +231,10 @@ router.post('/', authenticateToken, validateCreateReport, createReport);
 
 /**
  * @swagger
- * /api/reports/cancel/{reportId}:
+ * /api/reports/{reportId}/status:
  *   patch:
- *     summary: Cancelar un reporte
- *     description: Cambia el estado de un reporte a CANCELADO y registra el cambio en el historial
+ *     summary: Actualizar el estado de un reporte
+ *     description: Cambia el estado de un reporte a cualquier estado válido (PENDIENTE, EN_PROCESO, COMPLETADO, CANCELADO) y registra el cambio en el historial
  *     tags: [Reports]
  *     security:
  *       - bearerAuth: []
@@ -244,27 +245,71 @@ router.post('/', authenticateToken, validateCreateReport, createReport);
  *         schema:
  *           type: string
  *           format: uuid
- *         description: ID del reporte a cancelar
+ *         description: ID del reporte a actualizar
  *     requestBody:
- *       required: false
+ *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - stateName
  *             properties:
- *               comment:
+ *               stateName:
  *                 type: string
- *                 example: El problema fue resuelto antes de atenderlo
- *                 description: Comentario opcional sobre la cancelación
+ *                 enum: [PENDIENTE, EN_PROCESO, COMPLETADO, CANCELADO]
+ *                 example: EN_PROCESO
+ *                 description: Nombre del nuevo estado
  *     responses:
  *       200:
- *         description: Reporte cancelado exitosamente
+ *         description: Estado del reporte actualizado exitosamente
  *       400:
- *         description: El reporte ya está cancelado o no existe
+ *         description: El estado no existe o el reporte no existe
  *       401:
  *         description: No autenticado
  */
-router.patch('/cancel/:reportId', authenticateToken, cancelReport);
+router.patch('/:reportId/status', authenticateToken, updateReportStatus);
+
+/**
+ * @swagger
+ * /api/reports/{reportId}/assign:
+ *   patch:
+ *     summary: Asignar un trabajador a un reporte
+ *     description: Permite a una empresa asignar un usuario (worker) para atender el reporte
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: reportId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID del reporte
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - workerId
+ *             properties:
+ *               workerId:
+ *                 type: string
+ *                 format: uuid
+ *                 example: 550e8400-e29b-41d4-a716-446655440000
+ *                 description: ID del usuario (worker) a asignar
+ *     responses:
+ *       200:
+ *         description: Trabajador asignado exitosamente
+ *       400:
+ *         description: El trabajador no existe o el reporte no existe
+ *       401:
+ *         description: No autenticado
+ */
+router.patch('/:reportId/assign', authenticateToken, assignWorker);
 
 /**
  * @swagger

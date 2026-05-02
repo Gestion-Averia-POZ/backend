@@ -115,7 +115,7 @@ router.get('/user/:userId', authenticateToken, getRequestsByUser);
  *             type: object
  *             required: [state]
  *             properties:
- *               state: { type: string, enum: [PENDIENTE, APROBADO, CANCELADO] }
+ *               state: { type: string, enum: [EN_PROCESO, COMPLETADO, CANCELADO] }
  *     responses:
  *       200:
  *         description: Solicitud actualizada

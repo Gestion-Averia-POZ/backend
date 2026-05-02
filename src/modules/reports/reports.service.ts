@@ -183,30 +183,33 @@ class ReportsService {
   }
 
   /**
-   * Cancelar un reporte (cambiar estado a CANCELADO y registrar en historial)
+   * Actualizar el estado de un reporte (y registrar en historial)
    */
-  async cancelReport(reportId: string, userId: string, comment?: string) {
+  async updateReportStatus(reportId: string, userId: string, stateName: string) {
     const report = await prisma.report.findFirst({
       where: { id: reportId, isActive: true },
       include: { state: { select: { id: true, name: true } } }
     });
 
     if (!report) throw new Error('Reporte no encontrado');
-    if (report.state?.name === 'CANCELADO') throw new Error('El reporte ya está cancelado');
+    
+    if (report.state?.name === stateName) {
+      return await this._attachCoordinates(report);
+    }
 
-    const cancelledState = await prisma.state.findFirst({
-      where: { name: 'CANCELADO' },
+    const newState = await prisma.state.findFirst({
+      where: { name: stateName },
       select: { id: true }
     });
 
-    if (!cancelledState) {
-      throw new Error('Estado CANCELADO no encontrado.');
+    if (!newState) {
+      throw new Error(`Estado ${stateName} no encontrado.`);
     }
 
     const [updatedReport] = await prisma.$transaction([
       prisma.report.update({
         where: { id: reportId },
-        data: { stateId: cancelledState.id },
+        data: { stateId: newState.id },
         include: REPORT_INCLUDE
       }),
       prisma.historyChange.create({
@@ -214,8 +217,43 @@ class ReportsService {
           reportId,
           userId,
           previousState: report.stateId ?? null,
-          newState: cancelledState.id,
-          comment: comment ?? 'Reporte cancelado'
+          newState: newState.id,
+          comment: `Estado actualizado a ${stateName}`
+        }
+      })
+    ]);
+
+    return await this._attachCoordinates(updatedReport);
+  }
+
+  /**
+   * Asignar un trabajador a un reporte
+   */
+  async assignWorker(reportId: string, workerId: string, managerId: string) {
+    const report = await prisma.report.findFirst({
+      where: { id: reportId, isActive: true }
+    });
+
+    if (!report) throw new Error('Reporte no encontrado');
+
+    const worker = await prisma.user.findUnique({
+      where: { id: workerId },
+      select: { id: true, name: true, lastname: true }
+    });
+
+    if (!worker) throw new Error('El trabajador especificado no existe');
+
+    const [updatedReport] = await prisma.$transaction([
+      prisma.report.update({
+        where: { id: reportId },
+        data: { assignedManagerId: workerId },
+        include: REPORT_INCLUDE
+      }),
+      prisma.historyChange.create({
+        data: {
+          reportId,
+          userId: managerId,
+          comment: `Trabajador asignado: ${worker.name} ${worker.lastname}`
         }
       })
     ]);

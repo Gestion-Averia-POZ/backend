@@ -15,8 +15,8 @@ const createRequestSchema = z.object({
 });
 
 const updateRequestStateSchema = z.object({
-  state: z.enum(['PENDIENTE', 'APROBADO', 'CANCELADO'], {
-    errorMap: () => ({ message: 'Estado inválido (PENDIENTE, APROBADO, CANCELADO)' })
+  state: z.enum(['EN_PROCESO', 'COMPLETADO', 'CANCELADO'], {
+    errorMap: () => ({ message: 'Estado inválido (EN_PROCESO, COMPLETADO, CANCELADO)' })
   })
 });
 
