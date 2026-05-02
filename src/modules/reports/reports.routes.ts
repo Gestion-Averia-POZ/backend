@@ -10,7 +10,8 @@ import {
   updateReportStatus,
   assignWorker,
   getAssignedReports,
-  deleteReport
+  deleteReport,
+  hardDeleteReport
 } from './reports.controller';
 
 
@@ -565,8 +566,8 @@ router.get('/assigned', authenticateToken, getAssignedReports);
  * @swagger
  * /api/reports/{reportId}:
  *   delete:
- *     summary: Eliminar un reporte permanentemente
- *     description: Solo permite eliminar si el reporte está CANCELADO o si no tiene un responsable asignado.
+ *     summary: Eliminar un reporte (SoftDelete)
+ *     description: Cambia el estado isActive a false para que el reporte ya no sea visible en las listas generales, pero permanece en la base de datos.
  *     tags: [Reports]
  *     security:
  *       - bearerAuth: []
@@ -579,11 +580,35 @@ router.get('/assigned', authenticateToken, getAssignedReports);
  *           format: uuid
  *     responses:
  *       200:
- *         description: Reporte eliminado exitosamente
- *       400:
- *         description: No cumple las condiciones para ser eliminado
+ *         description: Reporte ocultado exitosamente
+ *       404:
+ *         description: Reporte no encontrado
  */
 router.delete('/:reportId', authenticateToken, deleteReport);
+
+/**
+ * @swagger
+ * /api/reports/{reportId}/hard:
+ *   delete:
+ *     summary: Eliminar un reporte permanentemente (Hard Delete)
+ *     description: Borra el registro físicamente de la base de datos. Solo permitido si el reporte está CANCELADO o no tiene responsable.
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: reportId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Reporte eliminado permanentemente
+ *       400:
+ *         description: No cumple las condiciones para ser eliminado físicamente
+ */
+router.delete('/:reportId/hard', authenticateToken, hardDeleteReport);
 
 export default router;
 

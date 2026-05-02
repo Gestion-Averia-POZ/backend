@@ -386,11 +386,32 @@ export const deleteReport = async (req: Request, res: Response, next: NextFuncti
   try {
     const { reportId } = req.params;
 
-    await reportsService.deleteReport(reportId);
+    await reportsService.softDeleteReport(reportId);
 
     res.json({
       success: true,
-      message: 'Reporte eliminado permanentemente'
+      message: 'Reporte eliminado exitosamente (borrado lógico)'
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+    next(error);
+  }
+};
+
+export const hardDeleteReport = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { reportId } = req.params;
+
+    await reportsService.hardDeleteReport(reportId);
+
+    res.json({
+      success: true,
+      message: 'Reporte eliminado permanentemente de la base de datos'
     });
   } catch (error) {
     if (error instanceof Error) {

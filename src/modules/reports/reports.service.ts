@@ -262,9 +262,27 @@ class ReportsService {
   }
 
   /**
-   * Eliminar un reporte permanentemente si está cancelado o no tiene responsable asignado
+   * Borrado lógico (Soft Delete) de un reporte
    */
-  async deleteReport(reportId: string) {
+  async softDeleteReport(reportId: string) {
+    const report = await prisma.report.findFirst({
+      where: { id: reportId, isActive: true }
+    });
+
+    if (!report) {
+      throw new Error('Reporte no encontrado o ya ha sido eliminado');
+    }
+
+    return await prisma.report.update({
+      where: { id: reportId },
+      data: { isActive: false }
+    });
+  }
+
+  /**
+   * Eliminar un reporte permanentemente si está cancelado o no tiene responsable asignado (Hard Delete)
+   */
+  async hardDeleteReport(reportId: string) {
     const report = await prisma.report.findFirst({
       where: { id: reportId },
       include: { state: { select: { name: true } } }
@@ -283,7 +301,7 @@ class ReportsService {
       });
     }
 
-    throw new Error('Solo se pueden eliminar reportes cancelados o sin responsable asignado');
+    throw new Error('Solo se pueden eliminar permanentemente reportes cancelados o sin responsable asignado');
   }
 
 
