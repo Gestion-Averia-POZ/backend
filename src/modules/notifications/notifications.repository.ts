@@ -1,5 +1,13 @@
 import prisma from '../../config/prisma';
 
+interface CreateNotificationData {
+  userId: string;
+  title: string;
+  description: string;
+  type: string;
+  isRead: boolean;
+}
+
 class NotificationsRepository {
   async findByUserId(userId: string) {
     return await prisma.notification.findMany({
@@ -35,9 +43,28 @@ class NotificationsRepository {
     });
   }
 
-  async createMany(data: any[]) {
+  async createMany(data: CreateNotificationData[]) {
     return await prisma.notification.createMany({
       data
+    });
+  }
+
+  /**
+   * Crea una única notificación y la retorna completa.
+   */
+  async create(data: CreateNotificationData) {
+    return await prisma.notification.create({
+      data
+    });
+  }
+
+  /**
+   * Busca si ya existe una notificación no leída de un tipo específico para un usuario.
+   * Usado para deduplicación de notificaciones PENDING_REPORTS.
+   */
+  async findUnreadByType(userId: string, type: string) {
+    return await prisma.notification.findFirst({
+      where: { userId, type, isRead: false }
     });
   }
 }

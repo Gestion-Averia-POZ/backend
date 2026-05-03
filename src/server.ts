@@ -1,13 +1,59 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import http from 'http';
+import { Server } from 'socket.io';
 import app from './app';
+import * as socketService from './services/socket.service';
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || 'localhost';
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Health: http://${HOST}:${PORT}/api/health`);
-  console.log(`Swagger: http://${HOST}:${PORT}/api/docs`);
+// Crear servidor HTTP explícito para poder adjuntar Socket.io
+const httpServer = http.createServer(app);
+
+// Inicializar Socket.io sobre el servidor HTTP
+const io = new Server(httpServer, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST']
+  }
+});
+
+// Registrar la instancia de io en el socketService (evita dependencias circulares)
+socketService.setIo(io);
+
+// Manejar conexiones de Socket.io
+io.on('connection', (socket) => {
+  // El token JWT se pasa como query param en la conexión
+  const token = socket.handshake.query.token as string | undefined;
+
+  if (!token) {
+    console.warn(`⚠️  Conexión rechazada (sin token) — socketId: ${socket.id}`);
+    socket.disconnect(true);
+    return;
+  }
+
+  const userId = socketService.validateSocketToken(token);
+
+  if (!userId) {
+    console.warn(`⚠️  Conexión rechazada (token inválido) — socketId: ${socket.id}`);
+    socket.disconnect(true);
+    return;
+  }
+
+  // Registrar la conexión autenticada
+  socketService.register(userId, socket.id);
+
+  socket.on('disconnect', () => {
+    socketService.unregister(socket.id);
+  });
+});
+
+// Arrancar el servidor HTTP (no app.listen, sino httpServer.listen)
+httpServer.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`❤️  Health: http://${HOST}:${PORT}/api/health`);
+  console.log(`📚 Swagger: http://${HOST}:${PORT}/api/docs`);
+  console.log(`🔌 WebSocket ready`);
 });
