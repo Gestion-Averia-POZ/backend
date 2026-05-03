@@ -1,13 +1,18 @@
 import { Router } from 'express';
 import {
   createRequest,
+  createPublicRequest,
   getAllRequests,
   getRequestById,
   getRequestsByUser,
   updateRequestState,
   deleteRequest
 } from './requests.controller';
-import { validateCreateRequest, validateUpdateRequestState } from './requests.validation';
+import {
+  validateCreateRequest,
+  validatePublicCreateRequest,
+  validateUpdateRequestState
+} from './requests.validation';
 import { authenticateToken, requireRole } from '../../middleware/auth.middleware';
 
 const router = Router();
@@ -21,10 +26,34 @@ const router = Router();
 
 /**
  * @swagger
+ * /api/requests/public:
+ *   post:
+ *     summary: Crear una nueva solicitud de REGISTRO (Público)
+ *     tags: [Requests]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [applicantName, description]
+ *             properties:
+ *               applicantName: { type: string }
+ *               description: { type: string }
+ *     responses:
+ *       201:
+ *         description: Solicitud de registro creada
+ */
+router.post('/public', validatePublicCreateRequest, createPublicRequest);
+
+/**
+ * @swagger
  * /api/requests:
  *   post:
- *     summary: Crear una nueva solicitud
+ *     summary: Crear una nueva solicitud (Autenticado)
  *     tags: [Requests]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:

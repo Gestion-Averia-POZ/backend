@@ -3,11 +3,29 @@ import { requestsService } from './requests.service';
 
 export const createRequest = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = req.user?.userId; // Opcional
+    const userId = req.user?.userId; // Requerido por el middleware auth
     const request = await requestsService.createRequest(req.body, userId);
     res.status(201).json({
       success: true,
       message: 'Solicitud creada exitosamente',
+      data: { request }
+    });
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+export const createPublicRequest = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Forzamos el tipo a REGISTRO y no enviamos userId
+    const publicData = {
+      ...req.body,
+      type: 'REGISTRO'
+    };
+    const request = await requestsService.createRequest(publicData);
+    res.status(201).json({
+      success: true,
+      message: 'Solicitud de registro creada exitosamente',
       data: { request }
     });
   } catch (error: any) {

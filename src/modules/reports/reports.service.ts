@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import prisma from '../../config/prisma';
 import geolocationService from '../../services/geolocation.service';
+import { notificationsService } from '../notifications/notifications.service';
 
 interface CreateReportData {
   description: string;
@@ -125,12 +126,42 @@ class ReportsService {
       // 5. Obtener el reporte creado con todas sus relaciones
       const createdReport = await prisma.report.findUnique({
         where: { id: reportId[0].id },
-        include: REPORT_INCLUDE
+        include: {
+          ...REPORT_INCLUDE,
+          neighborhood: { select: { id: true, name: true } }
+        }
       });
 
       if (createdReport) {
         (createdReport as any).latitude = data.latitude;
         (createdReport as any).longitude = data.longitude;
+      }
+
+      // 6. Trigger PENDING_REPORTS: si la empresa tiene >5 reportes pendientes en el mismo sector
+      if (createdReport && data.companyId && createdReport.neighborhoodId) {
+        try {
+          const pendingCount = await prisma.report.count({
+            where: {
+              companyId: data.companyId,
+              neighborhoodId: createdReport.neighborhoodId,
+              state: { name: 'PENDIENTE' },
+              isActive: true
+            }
+          });
+
+          if (pendingCount > 5) {
+            const neighborhoodName = (createdReport as any).neighborhood?.name ?? 'el sector';
+            await notificationsService.notifyCompanyManagers(
+              data.companyId,
+              'Reportes pendientes acumulados',
+              `Tiene ${pendingCount} reportes pendientes sin atender en el sector ${neighborhoodName}`,
+              'PENDING_REPORTS'
+            );
+          }
+        } catch (notifError) {
+          // No bloquear la respuesta si falla la notificación
+          console.error('Error enviando notificación PENDING_REPORTS:', notifError);
+        }
       }
 
       return createdReport;
@@ -223,6 +254,36 @@ class ReportsService {
       })
     ]);
 
+    const reportRef = `#${reportId.slice(0, 8).toUpperCase()}`;
+
+    // Trigger STATUS_CHANGE: notificar al usuario que creó el reporte
+    if (report.userId) {
+      try {
+        await notificationsService.create({
+          userId: report.userId,
+          title: 'Actualización de tu reporte',
+          description: `Tu reporte ${reportRef} cambió de estado a ${stateName}`,
+          type: 'STATUS_CHANGE'
+        });
+      } catch (notifError) {
+        console.error('Error enviando notificación STATUS_CHANGE:', notifError);
+      }
+    }
+
+    // Trigger REPORT_CANCELLED: notificar al worker asignado (si existe y el estado es CANCELADO)
+    if (stateName === 'CANCELADO' && report.assignedManagerId) {
+      try {
+        await notificationsService.create({
+          userId: report.assignedManagerId,
+          title: 'Reporte cancelado',
+          description: `El reporte ${reportRef} que tenías asignado fue cancelado`,
+          type: 'REPORT_CANCELLED'
+        });
+      } catch (notifError) {
+        console.error('Error enviando notificación REPORT_CANCELLED:', notifError);
+      }
+    }
+
     return await this._attachCoordinates(updatedReport);
   }
 
@@ -291,6 +352,18 @@ class ReportsService {
         }
       })
     ]);
+
+    // Trigger ASSIGNMENT: notificar al worker que fue asignado a este reporte
+    try {
+      await notificationsService.create({
+        userId: workerId,
+        title: 'Nueva asignación',
+        description: `Se te asignó el reporte #${reportId.slice(0, 8).toUpperCase()}`,
+        type: 'ASSIGNMENT'
+      });
+    } catch (notifError) {
+      console.error('Error enviando notificación ASSIGNMENT:', notifError);
+    }
 
     return await this._attachCoordinates(updatedReport);
   }
