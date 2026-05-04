@@ -2,11 +2,9 @@ import prisma from '../../config/prisma';
 import { CreateCategoryData, UpdateCategoryData } from './categories.validation';
 
 class CategoriesRepository {
-  async findAll() {
+  async findAll(includeInactive = false) {
     return await prisma.category.findMany({
-      where: {
-        isActive: true
-      },
+      where: includeInactive ? {} : { isActive: true },
       orderBy: {
         name: 'asc'
       }

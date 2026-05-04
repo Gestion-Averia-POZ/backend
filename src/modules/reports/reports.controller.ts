@@ -538,7 +538,21 @@ export const exportReportsToExcel = async (req: Request, res: Response, next: Ne
 
 export const getMetrics = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const metrics = await reportsService.getMetrics();
+    const startDate = req.query.startDate
+      ? new Date(req.query.startDate as string)
+      : undefined;
+    const endDate = req.query.endDate
+      ? new Date(req.query.endDate as string)
+      : undefined;
+
+    if (startDate && isNaN(startDate.getTime())) {
+      return res.status(400).json({ success: false, message: 'startDate inválida' });
+    }
+    if (endDate && isNaN(endDate.getTime())) {
+      return res.status(400).json({ success: false, message: 'endDate inválida' });
+    }
+
+    const metrics = await reportsService.getMetrics(startDate, endDate);
     res.json({
       success: true,
       message: 'Métricas obtenidas exitosamente',

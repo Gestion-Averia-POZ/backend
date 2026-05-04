@@ -12,12 +12,13 @@ class AuthRepository {
 
   async findByEmailWithRole(email: string) {
     return await prisma.user.findUnique({
-      where: { 
+      where: {
         email,
-        isActive: true // Solo usuarios activos
+        isActive: true
       },
       include: {
-        role: true
+        role: true,
+        company: true,
       }
     });
   }

@@ -3,7 +3,8 @@ import { categoriesService } from './categories.service';
 
 export const getAllCategories = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const categories = await categoriesService.getAllCategories();
+    const includeInactive = req.query.includeInactive === 'true';
+    const categories = await categoriesService.getAllCategories(includeInactive);
     res.status(200).json({
       success: true,
       data: {

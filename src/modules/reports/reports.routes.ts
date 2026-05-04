@@ -508,6 +508,34 @@ router.get('/user/:userId', authenticateToken, getReportsByUser);
 
 /**
  * @swagger
+ * /api/reports/assigned:
+ *   get:
+ *     summary: Obtener reportes asignados al usuario autenticado
+ *     description: Lista todos los reportes donde el usuario actual es el responsable asignado
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: neighborhoodName
+ *         schema: { type: string }
+ *       - in: query
+ *         name: categoryName
+ *         schema: { type: string }
+ *       - in: query
+ *         name: priority
+ *         schema: { type: string, enum: [BAJA, MEDIA, ALTA] }
+ *       - in: query
+ *         name: reportState
+ *         schema: { type: string, enum: [PENDIENTE, EN_PROCESO, COMPLETADO, CANCELADO] }
+ *     responses:
+ *       200:
+ *         description: Reportes asignados obtenidos
+ */
+router.get('/assigned', authenticateToken, getAssignedReports);
+
+/**
+ * @swagger
  * /api/reports/{reportId}:
  *   patch:
  *     summary: Actualizar campos básicos de un reporte
@@ -636,34 +664,6 @@ router.get('/:reportId', authenticateToken, getReportById);
  *         description: No autenticado
  */
 router.get('/neighborhood/:neighborhoodId', authenticateToken, getReportsByNeighborhood);
-
-/**
- * @swagger
- * /api/reports/assigned:
- *   get:
- *     summary: Obtener reportes asignados al usuario autenticado
- *     description: Lista todos los reportes donde el usuario actual es el responsable asignado
- *     tags: [Reports]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: neighborhoodName
- *         schema: { type: string }
- *       - in: query
- *         name: categoryName
- *         schema: { type: string }
- *       - in: query
- *         name: priority
- *         schema: { type: string, enum: [BAJA, MEDIA, ALTA] }
- *       - in: query
- *         name: reportState
- *         schema: { type: string, enum: [PENDIENTE, EN_PROCESO, COMPLETADO, CANCELADO] }
- *     responses:
- *       200:
- *         description: Reportes asignados obtenidos
- */
-router.get('/assigned', authenticateToken, getAssignedReports);
 
 /**
  * @swagger

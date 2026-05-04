@@ -23,7 +23,8 @@ export const updateCategorySchema = z.object({
       .min(3, 'El nombre debe tener al menos 3 caracteres')
       .max(100, 'El nombre no puede exceder 100 caracteres')
       .trim()
-      .optional()
+      .optional(),
+    isActive: z.boolean().optional()
   })
 });
 

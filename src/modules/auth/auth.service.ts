@@ -52,7 +52,8 @@ class AuthService {
         lastname: user.lastname,
         email: user.email,
         role: user.role?.name,
-        isActive: user.isActive
+        isActive: user.isActive,
+        ...(user.company && { company: { id: user.company.id, name: user.company.name } }),
       },
       token
     };

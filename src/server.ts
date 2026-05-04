@@ -3,6 +3,7 @@ dotenv.config();
 
 import http from 'http';
 import { Server } from 'socket.io';
+import type { Socket } from 'socket.io';
 import app from './app';
 import * as socketService from './services/socket.service';
 
@@ -24,7 +25,7 @@ const io = new Server(httpServer, {
 socketService.setIo(io);
 
 // Manejar conexiones de Socket.io
-io.on('connection', (socket) => {
+io.on('connection', (socket: Socket) => {
   // El token JWT se pasa como query param en la conexión
   const token = socket.handshake.query.token as string | undefined;
 

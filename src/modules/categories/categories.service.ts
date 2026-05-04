@@ -2,8 +2,8 @@ import { categoriesRepository } from './categories.repository';
 import { CreateCategoryData, UpdateCategoryData } from './categories.validation';
 
 class CategoriesService {
-  async getAllCategories() {
-    return await categoriesRepository.findAll();
+  async getAllCategories(includeInactive = false) {
+    return await categoriesRepository.findAll(includeInactive);
   }
 
   async getCategoryById(id: string) {

@@ -586,7 +586,16 @@ class ReportsService {
   /**
    * Obtener métricas clave para el dashboard
    */
-  async getMetrics() {
+  async getMetrics(startDate?: Date, endDate?: Date) {
+    const dateFilter = (startDate || endDate)
+      ? {
+          createdAt: {
+            ...(startDate ? { gte: startDate } : {}),
+            ...(endDate   ? { lte: endDate   } : {}),
+          },
+        }
+      : {};
+
     const [
       byStatus,
       topFailureTypes,
@@ -597,7 +606,7 @@ class ReportsService {
       // 1. Totales por Estado
       prisma.report.groupBy({
         by: ['stateId'],
-        where: { isActive: true },
+        where: { isActive: true, ...dateFilter },
         _count: { _all: true }
       }).then(async groups => {
         const states = await prisma.state.findMany();
@@ -610,7 +619,7 @@ class ReportsService {
       // 2. Top 5 Tipos de Falla
       prisma.report.groupBy({
         by: ['failureTypeId'],
-        where: { isActive: true, failureTypeId: { not: null } },
+        where: { isActive: true, failureTypeId: { not: null }, ...dateFilter },
         _count: { _all: true },
         orderBy: { _count: { failureTypeId: 'desc' } },
         take: 5
@@ -627,7 +636,7 @@ class ReportsService {
       // 3. Reportes por Prioridad
       prisma.report.groupBy({
         by: ['priority'],
-        where: { isActive: true },
+        where: { isActive: true, ...dateFilter },
         _count: { _all: true }
       }).then(groups => groups.map(g => ({
         priority: g.priority || 'SIN PRIORIDAD',
@@ -636,12 +645,13 @@ class ReportsService {
 
       // 4. Tasa de Resolución
       (async () => {
-        const total = await prisma.report.count({ where: { isActive: true } });
-        const resolved = await prisma.report.count({ 
-          where: { 
-            isActive: true, 
-            state: { name: 'COMPLETADO' } 
-          } 
+        const total = await prisma.report.count({ where: { isActive: true, ...dateFilter } });
+        const resolved = await prisma.report.count({
+          where: {
+            isActive: true,
+            state: { name: 'COMPLETADO' },
+            ...dateFilter,
+          }
         });
         return total > 0 ? (resolved / total) * 100 : 0;
       })(),
@@ -649,9 +659,10 @@ class ReportsService {
       // 5. Top 5 Sectores Críticos (Pendientes)
       prisma.report.groupBy({
         by: ['neighborhoodId'],
-        where: { 
-          isActive: true, 
-          state: { name: 'PENDIENTE' } 
+        where: {
+          isActive: true,
+          state: { name: 'PENDIENTE' },
+          ...dateFilter,
         },
         _count: { _all: true },
         orderBy: { _count: { neighborhoodId: 'desc' } },
