@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import * as ExcelJS from 'exceljs';
 import reportsService from './reports.service';
 import geolocationService from '../../services/geolocation.service';
 import geocodingService from '../../services/geocoding.service';
@@ -458,4 +459,92 @@ export const hardDeleteReport = async (req: Request, res: Response, next: NextFu
     next(error);
   }
 };
+export const exportReportsToExcel = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const filters = {
+      neighborhoodName: req.body.neighborhoodName as string | undefined,
+      failureTypeName: req.body.failureTypeName as string | undefined,
+      assignedManagerId: req.body.assignedManagerId as string | undefined,
+      categoryName: req.body.categoryName as string | undefined,
+      stateName: req.body.stateName as string | undefined,
+      companyName: req.body.companyName as string | undefined,
+      priority: req.body.priority as 'BAJA' | 'MEDIA' | 'ALTA' | undefined,
+      reportState: req.body.reportState as 'PENDIENTE' | 'EN_PROCESO' | 'COMPLETADO' | 'CANCELADO' | undefined
+    };
 
+    const reports = await reportsService.getReportsForExport(filters);
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Reportes de Averías');
+
+    // Estilo para las cabeceras
+    worksheet.columns = [
+      { header: 'ID', key: 'id', width: 12 },
+      { header: 'DESCRIPCIÓN', key: 'description', width: 40 },
+      { header: 'ESTADO', key: 'state', width: 15 },
+      { header: 'PRIORIDAD', key: 'priority', width: 12 },
+      { header: 'CATEGORÍA', key: 'category', width: 20 },
+      { header: 'TIPO DE FALLA', key: 'failureType', width: 25 },
+      { header: 'BARRIO', key: 'neighborhood', width: 25 },
+      { header: 'EMPRESA', key: 'company', width: 25 },
+      { header: 'TRABAJADOR ASIGNADO', key: 'manager', width: 30 },
+      { header: 'REPORTADO POR', key: 'user', width: 30 },
+      { header: 'DIRECCIÓN', key: 'address', width: 40 },
+      { header: 'FECHA', key: 'date', width: 20 }
+    ];
+
+    // Aplicar estilos a la fila de cabecera
+    worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF4F81BD' }
+    };
+
+    // Agregar datos
+    reports.forEach((report: any) => {
+      worksheet.addRow({
+        id: report.id.substring(0, 8).toUpperCase(),
+        description: report.description || 'Sin descripción',
+        state: report.state?.name || 'N/A',
+        priority: report.priority || 'N/A',
+        category: report.category?.name || 'N/A',
+        failureType: report.failureType?.name || 'N/A',
+        neighborhood: report.neighborhood?.name || 'N/A',
+        company: report.company?.name || 'N/A',
+        manager: report.assignedManager ? `${report.assignedManager.name} ${report.assignedManager.lastname}` : 'Sin asignar',
+        user: report.user ? `${report.user.name} ${report.user.lastname}` : 'N/A',
+        address: report.address || 'N/A',
+        date: new Date(report.createdAt).toLocaleString()
+      });
+    });
+
+    // Configurar cabeceras de respuesta para descarga directa
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=reportes-averias.xlsx'
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMetrics = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const metrics = await reportsService.getMetrics();
+    res.json({
+      success: true,
+      message: 'Métricas obtenidas exitosamente',
+      data: metrics
+    });
+  } catch (error) {
+    next(error);
+  }
+};

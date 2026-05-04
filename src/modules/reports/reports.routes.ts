@@ -12,14 +12,72 @@ import {
   assignWorker,
   getAssignedReports,
   deleteReport,
-  hardDeleteReport
+  hardDeleteReport,
+  exportReportsToExcel,
+  getMetrics
 } from './reports.controller';
 
 
 import { validateCreateReport, validateDetectNeighborhood, validateReportsFilters } from './reports.validation';
-import { authenticateToken } from '../../middleware/auth.middleware';
+import { authenticateToken, requireRole } from '../../middleware/auth.middleware';
 
 const router = Router();
+
+/**
+ * @swagger
+ * /api/reports/metrics:
+ *   get:
+ *     summary: Obtener métricas clave para el dashboard
+ *     description: Retorna estadísticas sobre estados, tipos de falla, prioridad, tasa de resolución y sectores críticos.
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Métricas obtenidas exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 message: { type: string }
+ *                 data: { type: object }
+ *       403:
+ *         description: No tiene permisos suficientes (Requiere ADMIN, COMPANY o WORKER)
+ */
+router.get('/metrics', authenticateToken, requireRole(['ADMIN', 'COMPANY', 'WORKER']), getMetrics);
+
+/**
+ * @swagger
+ * /api/reports/export:
+ *   post:
+ *     summary: Exportar reportes a Excel
+ *     description: Genera un archivo .xlsx con los reportes filtrados. Descarga directa.
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               neighborhoodName: { type: string }
+ *               reportState: { type: string, enum: [PENDIENTE, EN_PROCESO, COMPLETADO, CANCELADO] }
+ *               priority: { type: string, enum: [BAJA, MEDIA, ALTA] }
+ *     responses:
+ *       200:
+ *         description: Archivo Excel generado
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ */
+router.post('/export', authenticateToken, requireRole(['ADMIN', 'COMPANY', 'WORKER']), exportReportsToExcel);
+
 
 /**
  * @swagger

@@ -562,6 +562,119 @@ class ReportsService {
 
     return reports;
   }
+
+  /**
+   * Obtener reportes para exportación (sin paginación)
+   */
+  async getReportsForExport(filters: ReportsFilters) {
+    const where: any = { isActive: true };
+    this._applyFilters(where, filters);
+
+    if (filters.neighborhoodName) {
+      where.neighborhood = { name: { contains: filters.neighborhoodName, mode: 'insensitive' } };
+    }
+
+    const reports = await prisma.report.findMany({
+      where,
+      include: REPORT_INCLUDE,
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return await this._attachCoordinates(reports);
+  }
+
+  /**
+   * Obtener métricas clave para el dashboard
+   */
+  async getMetrics() {
+    const [
+      byStatus,
+      topFailureTypes,
+      byPriority,
+      resolutionRate,
+      criticalSectors
+    ] = await Promise.all([
+      // 1. Totales por Estado
+      prisma.report.groupBy({
+        by: ['stateId'],
+        where: { isActive: true },
+        _count: { _all: true }
+      }).then(async groups => {
+        const states = await prisma.state.findMany();
+        return groups.map(g => ({
+          state: states.find(s => s.id === g.stateId)?.name || 'Desconocido',
+          count: g._count._all
+        }));
+      }),
+
+      // 2. Top 5 Tipos de Falla
+      prisma.report.groupBy({
+        by: ['failureTypeId'],
+        where: { isActive: true, failureTypeId: { not: null } },
+        _count: { _all: true },
+        orderBy: { _count: { failureTypeId: 'desc' } },
+        take: 5
+      }).then(async groups => {
+        const failureTypes = await prisma.failureType.findMany({
+          where: { id: { in: groups.map(g => g.failureTypeId as number) } }
+        });
+        return groups.map(g => ({
+          type: failureTypes.find(ft => ft.id === g.failureTypeId)?.name || 'Desconocido',
+          count: g._count._all
+        }));
+      }),
+
+      // 3. Reportes por Prioridad
+      prisma.report.groupBy({
+        by: ['priority'],
+        where: { isActive: true },
+        _count: { _all: true }
+      }).then(groups => groups.map(g => ({
+        priority: g.priority || 'SIN PRIORIDAD',
+        count: g._count._all
+      }))),
+
+      // 4. Tasa de Resolución
+      (async () => {
+        const total = await prisma.report.count({ where: { isActive: true } });
+        const resolved = await prisma.report.count({ 
+          where: { 
+            isActive: true, 
+            state: { name: 'COMPLETADO' } 
+          } 
+        });
+        return total > 0 ? (resolved / total) * 100 : 0;
+      })(),
+
+      // 5. Top 5 Sectores Críticos (Pendientes)
+      prisma.report.groupBy({
+        by: ['neighborhoodId'],
+        where: { 
+          isActive: true, 
+          state: { name: 'PENDIENTE' } 
+        },
+        _count: { _all: true },
+        orderBy: { _count: { neighborhoodId: 'desc' } },
+        take: 5
+      }).then(async groups => {
+        const neighborhoods = await prisma.neighborhood.findMany({
+          where: { id: { in: groups.map(g => g.neighborhoodId as number) } }
+        });
+        return groups.map(g => ({
+          sector: neighborhoods.find(n => n.id === g.neighborhoodId)?.name || 'Desconocido',
+          count: g._count._all
+        }));
+      })
+    ]);
+
+    return {
+      byStatus,
+      topFailureTypes,
+      byPriority,
+      resolutionRate: parseFloat(resolutionRate.toFixed(2)),
+      criticalSectors
+    };
+  }
 }
 
 export default new ReportsService();
