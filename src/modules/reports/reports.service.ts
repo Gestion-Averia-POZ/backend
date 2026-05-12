@@ -586,7 +586,7 @@ class ReportsService {
   /**
    * Obtener métricas clave para el dashboard
    */
-  async getMetrics(startDate?: Date, endDate?: Date) {
+  async getMetrics(startDate?: Date, endDate?: Date, roleFilter?: { role: string; userId: string }, categoryId?: string, neighborhoodId?: number) {
     const dateFilter = (startDate || endDate)
       ? {
           createdAt: {
@@ -595,6 +595,28 @@ class ReportsService {
           },
         }
       : {};
+
+    // Filtro de alcance según rol
+    let scopeFilter: Record<string, unknown> = {};
+    if (roleFilter?.role === 'COMPANY') {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: roleFilter.userId },
+        select: { companyId: true }
+      });
+      if (dbUser?.companyId) {
+        scopeFilter = { companyId: dbUser.companyId };
+      }
+    } else if (roleFilter?.role === 'WORKER') {
+      scopeFilter = { assignedManagerId: roleFilter.userId };
+    }
+
+    const baseWhere = {
+      isActive: true,
+      ...dateFilter,
+      ...scopeFilter,
+      ...(categoryId ? { categoryId } : {}),
+      ...(neighborhoodId != null ? { neighborhoodId } : {}),
+    };
 
     const [
       byStatus,
@@ -606,7 +628,7 @@ class ReportsService {
       // 1. Totales por Estado
       prisma.report.groupBy({
         by: ['stateId'],
-        where: { isActive: true, ...dateFilter },
+        where: baseWhere,
         _count: { _all: true }
       }).then(async groups => {
         const states = await prisma.state.findMany();
@@ -619,7 +641,7 @@ class ReportsService {
       // 2. Top 5 Tipos de Falla
       prisma.report.groupBy({
         by: ['failureTypeId'],
-        where: { isActive: true, failureTypeId: { not: null }, ...dateFilter },
+        where: { ...baseWhere, failureTypeId: { not: null } },
         _count: { _all: true },
         orderBy: { _count: { failureTypeId: 'desc' } },
         take: 5
@@ -636,7 +658,7 @@ class ReportsService {
       // 3. Reportes por Prioridad
       prisma.report.groupBy({
         by: ['priority'],
-        where: { isActive: true, ...dateFilter },
+        where: baseWhere,
         _count: { _all: true }
       }).then(groups => groups.map(g => ({
         priority: g.priority || 'SIN PRIORIDAD',
@@ -645,13 +667,9 @@ class ReportsService {
 
       // 4. Tasa de Resolución
       (async () => {
-        const total = await prisma.report.count({ where: { isActive: true, ...dateFilter } });
+        const total = await prisma.report.count({ where: baseWhere });
         const resolved = await prisma.report.count({
-          where: {
-            isActive: true,
-            state: { name: 'COMPLETADO' },
-            ...dateFilter,
-          }
+          where: { ...baseWhere, state: { name: 'COMPLETADO' } }
         });
         return total > 0 ? (resolved / total) * 100 : 0;
       })(),
@@ -659,11 +677,7 @@ class ReportsService {
       // 5. Top 5 Sectores Críticos (Pendientes)
       prisma.report.groupBy({
         by: ['neighborhoodId'],
-        where: {
-          isActive: true,
-          state: { name: 'PENDIENTE' },
-          ...dateFilter,
-        },
+        where: { ...baseWhere, state: { name: 'PENDIENTE' } },
         _count: { _all: true },
         orderBy: { _count: { neighborhoodId: 'desc' } },
         take: 5
@@ -685,6 +699,13 @@ class ReportsService {
       resolutionRate: parseFloat(resolutionRate.toFixed(2)),
       criticalSectors
     };
+  }
+
+  async getNeighborhoods() {
+    return prisma.neighborhood.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    });
   }
 }
 

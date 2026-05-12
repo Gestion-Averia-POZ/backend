@@ -14,7 +14,8 @@ import {
   deleteReport,
   hardDeleteReport,
   exportReportsToExcel,
-  getMetrics
+  getMetrics,
+  getNeighborhoods
 } from './reports.controller';
 
 
@@ -47,6 +48,7 @@ const router = Router();
  *         description: No tiene permisos suficientes (Requiere ADMIN, COMPANY o WORKER)
  */
 router.get('/metrics', authenticateToken, requireRole(['ADMIN', 'COMPANY', 'WORKER']), getMetrics);
+router.get('/neighborhoods', authenticateToken, getNeighborhoods);
 
 /**
  * @swagger

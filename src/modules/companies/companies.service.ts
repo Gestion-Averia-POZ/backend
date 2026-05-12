@@ -11,7 +11,14 @@ class CompaniesService {
     if (!company) {
       throw new Error('Compañía no encontrada');
     }
-    return company;
+    const { companyCategories, ...rest } = company;
+    return {
+      ...rest,
+      categories: companyCategories.map((cc) => ({
+        id: cc.category.id,
+        name: cc.category.name,
+      })),
+    };
   }
 
   async getCompaniesByCategoryName(categoryName: string) {

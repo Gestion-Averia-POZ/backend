@@ -544,6 +544,10 @@ export const getMetrics = async (req: Request, res: Response, next: NextFunction
     const endDate = req.query.endDate
       ? new Date(req.query.endDate as string)
       : undefined;
+    const categoryId = req.query.categoryId as string | undefined;
+    const neighborhoodId = req.query.neighborhoodId
+      ? parseInt(req.query.neighborhoodId as string, 10)
+      : undefined;
 
     if (startDate && isNaN(startDate.getTime())) {
       return res.status(400).json({ success: false, message: 'startDate inválida' });
@@ -551,13 +555,26 @@ export const getMetrics = async (req: Request, res: Response, next: NextFunction
     if (endDate && isNaN(endDate.getTime())) {
       return res.status(400).json({ success: false, message: 'endDate inválida' });
     }
+    if (neighborhoodId !== undefined && isNaN(neighborhoodId)) {
+      return res.status(400).json({ success: false, message: 'neighborhoodId inválido' });
+    }
 
-    const metrics = await reportsService.getMetrics(startDate, endDate);
+    const { userId, role } = req.user!;
+    const metrics = await reportsService.getMetrics(startDate, endDate, { role, userId }, categoryId, neighborhoodId);
     res.json({
       success: true,
       message: 'Métricas obtenidas exitosamente',
       data: metrics
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getNeighborhoods = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const neighborhoods = await reportsService.getNeighborhoods();
+    res.json({ success: true, message: 'Barrios obtenidos', data: neighborhoods });
   } catch (error) {
     next(error);
   }

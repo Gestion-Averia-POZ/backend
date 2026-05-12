@@ -15,7 +15,12 @@ class CompaniesRepository {
 
   async findById(id: string) {
     return await prisma.company.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+        companyCategories: {
+          include: { category: true },
+        },
+      },
     });
   }
 
