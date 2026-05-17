@@ -16,9 +16,10 @@ const HOST = process.env.HOST || 'localhost';
 const httpServer = http.createServer(app);
 
 // Inicializar Socket.io sobre el servidor HTTP
+const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
 const io = new Server(httpServer, {
   cors: {
-    origin: '*',
+    origin: allowedOrigin,
     methods: ['GET', 'POST']
   }
 });
