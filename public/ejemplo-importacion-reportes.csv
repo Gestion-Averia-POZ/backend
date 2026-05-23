@@ -1,0 +1,9 @@
+description,sector,userEmail,categoryName,failureTypeName,companyName,address,priority,latitude,longitude
+"Hay una fuga de agua considerable en la esquina de la calle principal",Villa Asia,jose.gonzalez@gmail.com,AGUA,"Fuga mayor en tubería principal",Hidrobolívar,"Calle Principal",ALTA,,
+"El transformador de la esquina está haciendo ruidos extraños y sale chispas cuando llueve",Los Olivos,maria.rodriguez@hotmail.com,ELECTRICIDAD,"Falla en transformador",Corpoelec,"Avenida Bolívar",ALTA,8.2760,-62.7500
+"El camión de la basura no pasa desde hace 8 días y ya hay mal olor en todo el sector",Los Mangos,ana.martinez@gmail.com,ASEO,"Sin recolección por más de una semana",Fospuca,"Calle 5",ALTA,,
+"Tenemos fluctuaciones de voltaje constantes y ya se nos dañó la nevera y el aire acondicionado",Rio Negro,carlos.perez@outlook.com,ELECTRICIDAD,"Fluctuación de voltaje",Corpoelec,"Sector Rio Negro",MEDIA,,
+"El agua sale con un color marrón y olor feo desde hace una semana no se puede tomar",Rio Caura,carmen.lopez@gmail.com,AGUA,"Contaminación del agua potable",Hidrobolívar,"Rio Caura",ALTA,,
+"El poste de luz está inclinado y amenaza con caerse sobre las casas es muy peligroso",Unare I,roberto.diaz@hotmail.com,ELECTRICIDAD,"Cortocircuito en cableado público",Corpoelec,"Unare I",ALTA,,
+"Llevamos 4 días sin agua en todo el sector los niños no pueden ir al colegio sin bañarse",Unare III,patricia.morales@outlook.com,AGUA,"Corte total del suministro de agua",Hidrobolívar,"Unare III",ALTA,,
+"Las lámparas del alumbrado público llevan meses dañadas la calle está muy oscura",Terrazas del Caroni,fernando.ramirez@gmail.com,ALUMBRADO,"Las bombillas del alumbrado público llevan meses dañadas",Corpoelec,"Terrazas del Caroni",MEDIA,,

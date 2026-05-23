@@ -15,12 +15,30 @@ import {
   hardDeleteReport,
   exportReportsToExcel,
   getMetrics,
-  getNeighborhoods
+  getNeighborhoods,
+  importReportsFromCSV,
+  downloadCSVTemplate
 } from './reports.controller';
 
 
 import { validateCreateReport, validateDetectNeighborhood, validateReportsFilters } from './reports.validation';
 import { authenticateToken, requireRole } from '../../middleware/auth.middleware';
+import multer from 'multer';
+
+// Configurar multer para upload de archivos CSV
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB máximo
+  },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Solo se permiten archivos CSV'));
+    }
+  }
+});
 
 const router = Router();
 
@@ -49,6 +67,100 @@ const router = Router();
  */
 router.get('/metrics', authenticateToken, requireRole(['ADMIN', 'COMPANY', 'WORKER']), getMetrics);
 router.get('/neighborhoods', authenticateToken, getNeighborhoods);
+
+/**
+ * @swagger
+ * /api/reports/import/template:
+ *   get:
+ *     summary: Descargar plantilla CSV para importación
+ *     description: Descarga una plantilla CSV con el formato correcto para importar reportes
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Archivo CSV plantilla
+ *         content:
+ *           text/csv:
+ *             schema:
+ *               type: string
+ */
+router.get('/import/template', authenticateToken, downloadCSVTemplate);
+
+/**
+ * @swagger
+ * /api/reports/import:
+ *   post:
+ *     summary: Importar reportes desde archivo CSV
+ *     description: |
+ *       Permite importar múltiples reportes desde un archivo CSV.
+ *       
+ *       **Columnas requeridas:**
+ *       - description: Descripción del reporte (mín. 10 caracteres)
+ *       - sector: Nombre del barrio/sector (debe existir en BD)
+ *       - userEmail: Email del usuario que crea el reporte (debe existir en BD)
+ *       - categoryName: Nombre de la categoría
+ *       
+ *       **Columnas opcionales:**
+ *       - failureTypeName: Nombre del tipo de falla
+ *       - companyName: Nombre de la empresa (solo ADMIN puede usar este campo)
+ *       - address: Dirección del reporte
+ *       - priority: BAJA, MEDIA, ALTA, CRITICA
+ *       - latitude: Si se omite, se genera automáticamente dentro del sector
+ *       - longitude: Si se omite, se genera automáticamente dentro del sector
+ *       
+ *       **Reglas:**
+ *       - Si el usuario autenticado es COMPANY, ignora companyName y usa su propia compañía
+ *       - Si no se proporcionan coordenadas, se generan automáticamente dentro del sector
+ *       - Si el sector o usuario no existen, se rechaza toda la importación
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - file
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Archivo CSV con los reportes a importar
+ *     responses:
+ *       201:
+ *         description: Reportes importados exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                     created:
+ *                       type: number
+ *                     failed:
+ *                       type: number
+ *                     errors:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           row: { type: number }
+ *                           error: { type: string }
+ *       400:
+ *         description: Error en el archivo o datos inválidos
+ */
+router.post('/import', authenticateToken, requireRole(['ADMIN', 'COMPANY']), upload.single('file'), importReportsFromCSV);
 
 /**
  * @swagger

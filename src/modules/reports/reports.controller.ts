@@ -3,6 +3,8 @@ import * as ExcelJS from 'exceljs';
 import reportsService from './reports.service';
 import geolocationService from '../../services/geolocation.service';
 import geocodingService from '../../services/geocoding.service';
+import csvReportsImportService from '../../services/csv-reports-import.service';
+import prisma from '../../config/prisma';
 
 export const createReport = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -575,6 +577,92 @@ export const getNeighborhoods = async (req: Request, res: Response, next: NextFu
   try {
     const neighborhoods = await reportsService.getNeighborhoods();
     res.json({ success: true, message: 'Barrios obtenidos', data: neighborhoods });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Importar reportes desde archivo CSV
+ */
+export const importReportsFromCSV = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.userId;
+    const userRole = req.user?.role;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Usuario no autenticado' });
+    }
+
+    // Verificar que se envió un archivo
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No se proporcionó ningún archivo CSV'
+      });
+    }
+
+    // Verificar que es un archivo CSV
+    if (!req.file.originalname.endsWith('.csv') && req.file.mimetype !== 'text/csv') {
+      return res.status(400).json({
+        success: false,
+        message: 'El archivo debe ser de tipo CSV (.csv)'
+      });
+    }
+
+    // Obtener el companyId del usuario autenticado
+    let userCompanyId: string | null = null;
+    if (userRole === 'COMPANY') {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { companyId: true }
+      });
+      userCompanyId = user?.companyId || null;
+    }
+
+    // Leer contenido del archivo
+    const csvContent = req.file.buffer.toString('utf-8');
+
+    // Importar reportes
+    const result = await csvReportsImportService.importReportsFromCSV(csvContent, {
+      userId,
+      userRole: userRole || '',
+      userCompanyId
+    });
+
+    // Respuesta
+    const statusCode = result.created > 0 ? 201 : 400;
+    res.status(statusCode).json({
+      success: result.success,
+      message: result.created > 0
+        ? `Se importaron ${result.created} de ${result.total} reportes exitosamente`
+        : 'No se pudo importar ningún reporte',
+      data: {
+        total: result.total,
+        created: result.created,
+        failed: result.failed,
+        errors: result.errors,
+        createdReports: result.createdReports
+      }
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    next(error);
+  }
+};
+
+/**
+ * Descargar plantilla CSV para importación de reportes
+ */
+export const downloadCSVTemplate = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const template = csvReportsImportService.generateTemplate();
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=plantilla-reportes.csv');
+    res.send(template);
   } catch (error) {
     next(error);
   }

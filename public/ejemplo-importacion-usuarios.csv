@@ -1,0 +1,11 @@
+name,lastname,email,phoneNumber,password,roleName,companyName
+José,González,jose.gonzalez@gmail.com,+58 414 1234567,,CITIZEN,
+María,Rodríguez,maria.rodriguez@hotmail.com,+58 424 2345678,,WORKER,Hidrobolívar
+Carlos,Pérez,carlos.perez@outlook.com,+58 416 3456789,,WORKER,Corpoelec
+Ana,Martínez,ana.martinez@gmail.com,,CITIZEN,
+Luis,Hernández,luis.hernandez@yahoo.com,+58 412 4567890,miPassword123,WORKER,Fospuca
+Carmen,López,carmen.lopez@gmail.com,+58 414 5678901,,CITIZEN,
+Roberto,Díaz,roberto.diaz@hotmail.com,+58 424 6789012,,WORKER,Hidrobolívar
+Patricia,Morales,patricia.morales@outlook.com,+58 416 7890123,,CITIZEN,
+Fernando,Ramírez,fernando.ramirez@gmail.com,,WORKER,Corpoelec
+Gabriela,Torres,gabriela.torres@yahoo.com,+58 412 8901234,,CITIZEN,
