@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { usersService } from './users.service';
 import csvUsersImportService from '../../services/csv-users-import.service';
 import prisma from '../../config/prisma';
+import * as xlsx from 'xlsx';
 
 export const createEmployee = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -50,15 +51,19 @@ export const importUsersFromCSV = async (req: Request, res: Response, next: Next
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: 'No se proporcionó ningún archivo CSV'
+        message: 'No se proporcionó ningún archivo'
       });
     }
 
-    // Verificar que es un archivo CSV
-    if (!req.file.originalname.endsWith('.csv') && req.file.mimetype !== 'text/csv') {
+    const isExcel = req.file.originalname.endsWith('.xlsx') || 
+                    req.file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    const isCsv = req.file.originalname.endsWith('.csv') || 
+                  req.file.mimetype === 'text/csv';
+
+    if (!isExcel && !isCsv) {
       return res.status(400).json({
         success: false,
-        message: 'El archivo debe ser de tipo CSV (.csv)'
+        message: 'El archivo debe ser de tipo CSV (.csv) o Excel (.xlsx)'
       });
     }
 
@@ -73,7 +78,18 @@ export const importUsersFromCSV = async (req: Request, res: Response, next: Next
     }
 
     // Leer contenido del archivo
-    const csvContent = req.file.buffer.toString('utf-8');
+    let csvContent = '';
+    
+    if (isExcel) {
+      // Convertir Excel a CSV
+      const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      csvContent = xlsx.utils.sheet_to_csv(worksheet);
+    } else {
+      // Leer CSV directamente
+      csvContent = req.file.buffer.toString('utf-8');
+    }
 
     // Importar usuarios
     const result = await csvUsersImportService.importUsersFromCSV(csvContent, {
@@ -114,7 +130,22 @@ export const downloadUsersCSVTemplate = async (req: Request, res: Response, next
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename=plantilla-usuarios.csv');
-    res.send('﻿' + template);
+    res.send('\uFEFF' + template);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Descargar plantilla Excel para importación de usuarios
+ */
+export const downloadUsersExcelTemplate = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const buffer = csvUsersImportService.generateExcelTemplate();
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=plantilla-usuarios.xlsx');
+    res.send(buffer);
   } catch (error) {
     next(error);
   }

@@ -1,20 +1,23 @@
 import { Router } from 'express';
-import { createEmployee, createCompanyUser, importUsersFromCSV, downloadUsersCSVTemplate } from './users.controller';
+import { createEmployee, createCompanyUser, importUsersFromCSV, downloadUsersCSVTemplate, downloadUsersExcelTemplate } from './users.controller';
 import { validateCreateEmployee, validateCreateCompanyUser } from './users.validation';
 import { authenticateToken, requireRole } from '../../middleware/auth.middleware';
 import multer from 'multer';
 
-// Configurar multer para upload de archivos CSV
+// Configurar multer para upload de archivos CSV o Excel
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB máximo
   },
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+    const isCsv = file.mimetype === 'text/csv' || file.originalname.endsWith('.csv');
+    const isExcel = file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || file.originalname.endsWith('.xlsx');
+    
+    if (isCsv || isExcel) {
       cb(null, true);
     } else {
-      cb(new Error('Solo se permiten archivos CSV'));
+      cb(new Error('Solo se permiten archivos CSV o Excel (.xlsx)'));
     }
   }
 });
@@ -49,11 +52,31 @@ router.get('/import/template', authenticateToken, requireRole(['ADMIN', 'COMPANY
 
 /**
  * @swagger
+ * /api/users/import/template-excel:
+ *   get:
+ *     summary: Descargar plantilla Excel para importación de usuarios
+ *     description: Descarga una plantilla en formato .xlsx con la estructura correcta para importar usuarios (CITIZEN y WORKER)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Archivo Excel generado
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ */
+router.get('/import/template-excel', authenticateToken, requireRole(['ADMIN', 'COMPANY']), downloadUsersExcelTemplate);
+
+/**
+ * @swagger
  * /api/users/import:
  *   post:
- *     summary: Importar usuarios desde archivo CSV
+ *     summary: Importar usuarios desde archivo CSV o Excel
  *     description: |
- *       Permite importar múltiples usuarios desde un archivo CSV.
+ *       Permite importar múltiples usuarios desde un archivo CSV o Excel (.xlsx).
  *       - Solo se pueden importar usuarios con rol CITIZEN o WORKER
  *       - ADMIN puede asignar usuarios a cualquier compañía
  *       - COMPANY solo puede asignar usuarios a su propia compañía
@@ -75,7 +98,7 @@ router.get('/import/template', authenticateToken, requireRole(['ADMIN', 'COMPANY
  *               file:
  *                 type: string
  *                 format: binary
- *                 description: Archivo CSV con los usuarios a importar
+ *                 description: Archivo CSV o Excel con los usuarios a importar
  *     responses:
  *       201:
  *         description: Usuarios importados exitosamente

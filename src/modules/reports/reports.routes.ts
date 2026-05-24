@@ -17,7 +17,8 @@ import {
   getMetrics,
   getNeighborhoods,
   importReportsFromCSV,
-  downloadCSVTemplate
+  downloadCSVTemplate,
+  downloadExcelTemplate
 } from './reports.controller';
 
 
@@ -32,10 +33,13 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024, // 5MB máximo
   },
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+    const isCsv = file.mimetype === 'text/csv' || file.originalname.endsWith('.csv');
+    const isExcel = file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || file.originalname.endsWith('.xlsx');
+    
+    if (isCsv || isExcel) {
       cb(null, true);
     } else {
-      cb(new Error('Solo se permiten archivos CSV'));
+      cb(new Error('Solo se permiten archivos CSV o Excel (.xlsx)'));
     }
   }
 });
@@ -89,11 +93,31 @@ router.get('/import/template', authenticateToken, downloadCSVTemplate);
 
 /**
  * @swagger
+ * /api/reports/import/template-excel:
+ *   get:
+ *     summary: Descargar plantilla Excel para importación
+ *     description: Descarga una plantilla en formato .xlsx con la estructura correcta para importar reportes
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Archivo Excel generado
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ */
+router.get('/import/template-excel', authenticateToken, downloadExcelTemplate);
+
+/**
+ * @swagger
  * /api/reports/import:
  *   post:
- *     summary: Importar reportes desde archivo CSV
+ *     summary: Importar reportes desde archivo CSV o Excel
  *     description: |
- *       Permite importar múltiples reportes desde un archivo CSV.
+ *       Permite importar múltiples reportes desde un archivo CSV o Excel (.xlsx).
  *       
  *       **Columnas requeridas:**
  *       - description: Descripción del reporte (mín. 10 caracteres)

@@ -13,6 +13,7 @@
 
 import prisma from '../config/prisma';
 import bcrypt from 'bcrypt';
+import * as xlsx from 'xlsx';
 
 export interface CSVUserImportResult {
   success: boolean;
@@ -355,6 +356,35 @@ class CSVUsersImportService {
     ];
 
     return csvLines.join('\n');
+  }
+
+  /**
+   * Generar plantilla Excel para usuarios
+   */
+  generateExcelTemplate(): Buffer {
+    const headers = [
+      'name',
+      'lastname',
+      'email',
+      'phoneNumber',
+      'password',
+      'roleName',
+      'companyName'
+    ];
+
+    const exampleRows = [
+      ['José', 'González', 'jose.gonzalez@gmail.com', '+58 414 1234567', '', 'CITIZEN', ''],
+      ['María', 'Rodríguez', 'maria.rodriguez@hotmail.com', '+58 424 2345678', '', 'WORKER', 'Hidrobolívar'],
+      ['Carlos', 'Pérez', 'carlos.perez@outlook.com', '+58 416 3456789', '', 'WORKER', 'Corpoelec'],
+      ['Ana', 'Martínez', 'ana.martinez@gmail.com', '', '', 'CITIZEN', ''],
+      ['Luis', 'Hernández', 'luis.hernandez@yahoo.com', '+58 412 4567890', 'miPassword123', 'WORKER', 'Fospuca']
+    ];
+
+    const worksheet = xlsx.utils.aoa_to_sheet([headers, ...exampleRows]);
+    const workbook = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(workbook, worksheet, 'Usuarios');
+
+    return xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
   }
 }
 

@@ -12,6 +12,7 @@
 
 import prisma from '../config/prisma';
 import { Prisma } from '@prisma/client';
+import * as xlsx from 'xlsx';
 
 export interface CSVReportImportResult {
   success: boolean;
@@ -116,8 +117,8 @@ class CSVReportsImportService {
       // y generar un punto aleatorio dentro de esos límites
       const result = await prisma.$queryRaw<Array<{ lat: number; lng: number }>>`
         SELECT 
-          ST_Y(ST_GeneratePoints(geom, 1)) as lat,
-          ST_X(ST_GeneratePoints(geom, 1)) as lng
+          ST_Y(ST_GeometryN(ST_GeneratePoints(geom, 1), 1)) as lat,
+          ST_X(ST_GeometryN(ST_GeneratePoints(geom, 1), 1)) as lng
         FROM neighborhood
         WHERE id = ${neighborhoodId}
         LIMIT 1
@@ -508,6 +509,69 @@ class CSVReportsImportService {
     ];
 
     return csvLines.join('\n');
+  }
+
+  /**
+   * Generar plantilla Excel para reportes
+   */
+  generateExcelTemplate(): Buffer {
+    const headers = [
+      'description',
+      'sector',
+      'userEmail',
+      'categoryName',
+      'failureTypeName',
+      'companyName',
+      'address',
+      'priority',
+      'latitude',
+      'longitude'
+    ];
+
+    const exampleRows = [
+      [
+        'Hay una fuga de agua considerable en la esquina de la calle principal',
+        'Villa Asia',
+        'jose.gonzalez@gmail.com',
+        'AGUA',
+        'Fuga mayor en tubería principal',
+        'Hidrobolívar',
+        'Calle Principal',
+        'ALTA',
+        '',
+        ''
+      ],
+      [
+        'El transformador de la esquina está haciendo ruidos extraños y sale chispas',
+        'Los Olivos',
+        'maria.rodriguez@hotmail.com',
+        'ELECTRICIDAD',
+        'Falla en transformador',
+        'Corpoelec',
+        'Avenida Bolívar',
+        'ALTA',
+        '8.2760',
+        '-62.7500'
+      ],
+      [
+        'El camión de la basura no pasa desde hace 8 días y ya hay mal olor',
+        'Los Mangos',
+        'ana.martinez@gmail.com',
+        'ASEO',
+        'Sin recolección por más de una semana',
+        'Fospuca',
+        'Calle 5',
+        'ALTA',
+        '',
+        ''
+      ]
+    ];
+
+    const worksheet = xlsx.utils.aoa_to_sheet([headers, ...exampleRows]);
+    const workbook = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(workbook, worksheet, 'Reportes');
+
+    return xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
   }
 }
 
