@@ -37,7 +37,7 @@ const REPORT_INCLUDE = {
   company:         { select: { id: true, name: true } },
   failureType:     { select: { id: true, name: true, priority: true } },
   assignedManager: { select: { id: true, name: true, lastname: true, email: true } },
-  user:            { select: { id: true, name: true, lastname: true, email: true } }
+  user:            { select: { id: true, name: true, lastname: true, email: true, phoneNumber: true } }
 } as const;
 
 class ReportsService {

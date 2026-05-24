@@ -46,14 +46,15 @@ class CSVUsersImportService {
    * Parsear contenido CSV a array de objetos
    */
   private parseCSV(csvContent: string): CSVUserRow[] {
-    const lines = csvContent.trim().split('\n');
-    
+    const content = csvContent.replace(/^﻿/, '');
+    const lines = content.trim().split('\n');
+
     if (lines.length < 2) {
       throw new Error('El archivo CSV debe tener al menos una fila de encabezados y una fila de datos');
     }
 
     // Obtener encabezados
-    const headers = this.parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
+    const headers = this.parseCSVLine(lines[0]).map(h => h.trim());
     
     // Parsear filas
     const rows: CSVUserRow[] = [];
@@ -262,77 +263,65 @@ class CSVUsersImportService {
       return result;
     }
 
-    // Hashear password default
+    // Hashear contraseñas secuencialmente para no saturar la CPU en archivos grandes
     const defaultPassword = await bcrypt.hash('123456', 10);
+    const hashedPasswords: string[] = [];
+    for (const row of rows) {
+      hashedPasswords.push(row.password ? await bcrypt.hash(row.password, 10) : defaultPassword);
+    }
 
-    // Usar transacción para importar todos los usuarios
+    // Construir el array completo de usuarios a insertar
+    const usersData = rows.map((row, i) => {
+      const roleNameUpper = row.roleName!.toUpperCase();
+      let companyId: string | null = null;
+      if (roleNameUpper === 'WORKER') {
+        if (context.userRole === 'COMPANY') {
+          companyId = context.userCompanyId;
+        } else if (row.companyName) {
+          companyId = companiesCache.get(row.companyName.toUpperCase()) || null;
+        }
+      }
+      return {
+        name: row.name!.trim(),
+        lastname: row.lastname!.trim(),
+        email: row.email!.toLowerCase().trim(),
+        password: hashedPasswords[i],
+        phoneNumber: row.phoneNumber?.trim() || null,
+        roleId: roleNameUpper === 'CITIZEN' ? citizenRole.id : workerRole.id,
+        companyId,
+        isActive: true,
+      };
+    });
+
+    // Un solo INSERT masivo — sin loop dentro de la transacción
     try {
       await prisma.$transaction(async (tx) => {
-        for (let i = 0; i < rows.length; i++) {
-          const row = rows[i];
-          const rowNumber = i + 2;
-
-          try {
-            const roleNameUpper = row.roleName!.toUpperCase();
-            const roleId = roleNameUpper === 'CITIZEN' ? citizenRole.id : workerRole.id;
-
-            // Determinar compañía
-            let companyId: string | null = null;
-            if (roleNameUpper === 'WORKER') {
-              if (context.userRole === 'COMPANY') {
-                // COMPANY usa su propia compañía
-                companyId = context.userCompanyId;
-              } else if (row.companyName) {
-                // ADMIN usa la compañía del CSV
-                companyId = companiesCache.get(row.companyName.toUpperCase()) || null;
-              }
-            }
-
-            // Crear usuario
-            const user = await tx.user.create({
-              data: {
-                name: row.name!.trim(),
-                lastname: row.lastname!.trim(),
-                email: row.email!.toLowerCase().trim(),
-                password: row.password ? await bcrypt.hash(row.password, 10) : defaultPassword,
-                phoneNumber: row.phoneNumber?.trim() || null,
-                roleId: roleId,
-                companyId: companyId,
-                isActive: true
-              },
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                role: { select: { name: true } }
-              }
-            });
-
-            result.created++;
-            result.createdUsers.push({
-              id: user.id,
-              name: user.name,
-              email: user.email,
-              role: user.role?.name || 'SIN_ROL'
-            });
-
-          } catch (error) {
-            result.failed++;
-            result.errors.push({
-              row: rowNumber,
-              error: error instanceof Error ? error.message : 'Error al crear usuario'
-            });
-            throw error; // Rollback de la transacción
-          }
-        }
+        await tx.user.createMany({ data: usersData });
       });
 
+      // Recuperar los usuarios creados para devolver sus IDs
+      const insertedEmails = usersData.map(u => u.email);
+      const created = await prisma.user.findMany({
+        where: { email: { in: insertedEmails } },
+        select: { id: true, name: true, email: true, role: { select: { name: true } } },
+      });
+
+      result.created = created.length;
+      result.createdUsers = created.map(u => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role?.name || 'SIN_ROL',
+      }));
       result.success = result.created > 0;
 
     } catch (error) {
-      // La transacción falló, ya tenemos los errores registrados
       result.created = 0;
       result.success = false;
+      result.errors.push({
+        row: 0,
+        error: error instanceof Error ? error.message : 'Error al importar usuarios',
+      });
     }
 
     return result;
@@ -362,7 +351,7 @@ class CSVUsersImportService {
 
     const csvLines = [
       headers.join(','),
-      ...exampleRows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ...exampleRows.map(row => row.join(','))
     ];
 
     return csvLines.join('\n');

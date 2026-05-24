@@ -48,14 +48,15 @@ class CSVReportsImportService {
    * Parsear contenido CSV a array de objetos
    */
   private parseCSV(csvContent: string): CSVReportRow[] {
-    const lines = csvContent.trim().split('\n');
-    
+    const content = csvContent.replace(/^﻿/, '');
+    const lines = content.trim().split('\n');
+
     if (lines.length < 2) {
       throw new Error('El archivo CSV debe tener al menos una fila de encabezados y una fila de datos');
     }
 
     // Obtener encabezados
-    const headers = this.parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
+    const headers = this.parseCSVLine(lines[0]).map(h => h.trim());
     
     // Parsear filas
     const rows: CSVReportRow[] = [];
@@ -340,121 +341,106 @@ class CSVReportsImportService {
       return result;
     }
 
-    // Usar transacción para importar todos los reportes
+    // Pre-calcular todos los datos derivados ANTES de abrir la transacción
+    type ReportData = {
+      userId: string; categoryId: string; neighborhood: { id: number; name: string };
+      latitude: number; longitude: number; companyId: string | null;
+      failureTypeId: number | null; priority: string; description: string;
+      address: string | null;
+    };
+
+    const reportsData: ReportData[] = [];
+
+    for (const row of rows) {
+      const userId = usersCache.get(row.userEmail!.toLowerCase())!;
+      const categoryId = categoriesCache.get(row.categoryName!.toUpperCase())!;
+      const neighborhood = neighborhoodsCache.get(row.sector!.toUpperCase())!;
+
+      let latitude: number;
+      let longitude: number;
+      if (row.latitude && row.longitude) {
+        latitude = parseFloat(row.latitude);
+        longitude = parseFloat(row.longitude);
+      } else {
+        const coords = await this.generateRandomCoordinatesInNeighborhood(neighborhood.id);
+        if (!coords) throw new Error(`No se pudieron generar coordenadas para el sector "${row.sector}"`);
+        latitude = coords.lat;
+        longitude = coords.lng;
+      }
+
+      let companyId: string | null = null;
+      if (context.userRole === 'COMPANY') {
+        companyId = context.userCompanyId;
+      } else if (context.userRole === 'ADMIN' && row.companyName) {
+        companyId = companiesCache.get(row.companyName.toUpperCase()) || null;
+      }
+
+      let failureTypeId: number | null = null;
+      let priority = row.priority?.toUpperCase() || 'MEDIA';
+      if (row.failureTypeName && row.categoryName) {
+        const key = `${row.categoryName.toUpperCase()}_${row.failureTypeName.toUpperCase()}`;
+        const ft = failureTypesCache.get(key);
+        if (ft) {
+          failureTypeId = ft.id;
+          if (!row.priority) priority = ft.priority;
+        }
+      }
+
+      reportsData.push({
+        userId, categoryId, neighborhood, latitude, longitude,
+        companyId, failureTypeId, priority,
+        description: row.description!,
+        address: row.address || null,
+      });
+    }
+
+    // Transacción con solo INSERTs — sin lógica async dentro
     try {
       await prisma.$transaction(async (tx) => {
-        for (let i = 0; i < rows.length; i++) {
-          const row = rows[i];
-          const rowNumber = i + 2;
+        for (let i = 0; i < reportsData.length; i++) {
+          const d = reportsData[i];
 
-          try {
-            // Obtener IDs
-            const userId = usersCache.get(row.userEmail!.toLowerCase())!;
-            const categoryId = categoriesCache.get(row.categoryName!.toUpperCase())!;
-            const neighborhood = neighborhoodsCache.get(row.sector!.toUpperCase())!;
+          const reportId = await tx.$queryRaw<Array<{ id: string }>>`
+            INSERT INTO report (
+              id, description, location, address,
+              category_id, user_id, neighborhood_id, state_id,
+              company_id, failure_type_id, priority,
+              is_active, created_at, updated_at
+            ) VALUES (
+              gen_random_uuid(),
+              ${d.description},
+              ST_SetSRID(ST_MakePoint(${d.longitude}, ${d.latitude}), 4326),
+              ${d.address},
+              CAST(${d.categoryId} AS UUID),
+              CAST(${d.userId} AS UUID),
+              ${d.neighborhood.id},
+              ${pendingState.id},
+              CAST(${d.companyId} AS UUID),
+              ${d.failureTypeId},
+              ${d.priority},
+              true, NOW(), NOW()
+            )
+            RETURNING id
+          `;
 
-            // Determinar coordenadas
-            let latitude: number;
-            let longitude: number;
-
-            if (row.latitude && row.longitude) {
-              latitude = parseFloat(row.latitude);
-              longitude = parseFloat(row.longitude);
-            } else {
-              // Generar coordenadas aleatorias dentro del sector
-              const coords = await this.generateRandomCoordinatesInNeighborhood(neighborhood.id);
-              if (!coords) {
-                throw new Error(`No se pudieron generar coordenadas para el sector "${row.sector}"`);
-              }
-              latitude = coords.lat;
-              longitude = coords.lng;
-            }
-
-            // Determinar compañía
-            let companyId: string | null = null;
-            if (context.userRole === 'COMPANY') {
-              // COMPANY usa su propia compañía
-              companyId = context.userCompanyId;
-            } else if (context.userRole === 'ADMIN' && row.companyName) {
-              // ADMIN usa la compañía del CSV
-              companyId = companiesCache.get(row.companyName.toUpperCase()) || null;
-            }
-
-            // Determinar tipo de falla y prioridad
-            let failureTypeId: number | null = null;
-            let priority = row.priority?.toUpperCase() || 'MEDIA';
-
-            if (row.failureTypeName && row.categoryName) {
-              const key = `${row.categoryName.toUpperCase()}_${row.failureTypeName.toUpperCase()}`;
-              const ft = failureTypesCache.get(key);
-              if (ft) {
-                failureTypeId = ft.id;
-                if (!row.priority) {
-                  priority = ft.priority; // Heredar prioridad del tipo de falla
-                }
-              }
-            }
-
-            // Crear el reporte
-            const reportId = await tx.$queryRaw<Array<{ id: string }>>`
-              INSERT INTO report (
-                id,
-                description,
-                location,
-                address,
-                category_id,
-                user_id,
-                neighborhood_id,
-                state_id,
-                company_id,
-                failure_type_id,
-                priority,
-                is_active,
-                created_at,
-                updated_at
-              ) VALUES (
-                gen_random_uuid(),
-                ${row.description},
-                ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326),
-                ${row.address || null},
-                CAST(${categoryId} AS UUID),
-                CAST(${userId} AS UUID),
-                ${neighborhood.id},
-                ${pendingState.id},
-                CAST(${companyId} AS UUID),
-                ${failureTypeId},
-                ${priority},
-                true,
-                NOW(),
-                NOW()
-              )
-              RETURNING id
-            `;
-
-            result.created++;
-            result.createdReports.push({
-              id: reportId[0].id,
-              description: row.description!.substring(0, 50) + '...',
-              sector: neighborhood.name
-            });
-
-          } catch (error) {
-            result.failed++;
-            result.errors.push({
-              row: rowNumber,
-              error: error instanceof Error ? error.message : 'Error al crear reporte'
-            });
-            throw error; // Rollback de la transacción
-          }
+          result.created++;
+          result.createdReports.push({
+            id: reportId[0].id,
+            description: d.description.substring(0, 50) + (d.description.length > 50 ? '...' : ''),
+            sector: d.neighborhood.name,
+          });
         }
-      });
+      }, { timeout: 60000 });
 
       result.success = result.created > 0;
 
     } catch (error) {
-      // La transacción falló
       result.created = 0;
       result.success = false;
+      result.errors.push({
+        row: 0,
+        error: error instanceof Error ? error.message : 'Error al importar reportes',
+      });
     }
 
     return result;
@@ -518,7 +504,7 @@ class CSVReportsImportService {
 
     const csvLines = [
       headers.join(','),
-      ...exampleRows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ...exampleRows.map(row => row.join(','))
     ];
 
     return csvLines.join('\n');

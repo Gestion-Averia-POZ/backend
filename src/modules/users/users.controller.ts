@@ -112,9 +112,9 @@ export const downloadUsersCSVTemplate = async (req: Request, res: Response, next
   try {
     const template = csvUsersImportService.generateTemplate();
 
-    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename=plantilla-usuarios.csv');
-    res.send(template);
+    res.send('﻿' + template);
   } catch (error) {
     next(error);
   }

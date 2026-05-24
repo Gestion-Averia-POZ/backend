@@ -660,9 +660,9 @@ export const downloadCSVTemplate = async (req: Request, res: Response, next: Nex
   try {
     const template = csvReportsImportService.generateTemplate();
 
-    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename=plantilla-reportes.csv');
-    res.send(template);
+    res.send('﻿' + template);
   } catch (error) {
     next(error);
   }
