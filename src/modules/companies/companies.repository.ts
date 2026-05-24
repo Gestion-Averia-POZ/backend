@@ -69,6 +69,38 @@ class CompaniesRepository {
     });
   }
 
+  async findRelatedCitizens(companyId: string) {
+    return await prisma.user.findMany({
+      where: {
+        role: {
+          name: {
+            equals: 'CITIZEN',
+            mode: 'insensitive'
+          }
+        },
+        reports: {
+          some: {
+            companyId: companyId,
+            isActive: true
+          }
+        },
+        isActive: true
+      },
+      select: {
+        id: true,
+        name: true,
+        lastname: true,
+        email: true,
+        phoneNumber: true,
+        createdAt: true
+      },
+      orderBy: {
+        name: 'asc'
+      }
+    });
+  }
+
+
   async update(id: string, data: UpdateCompanyData) {
     return await prisma.company.update({
       where: { id },

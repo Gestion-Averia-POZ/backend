@@ -30,6 +30,21 @@ export const getCompanyById = async (req: Request, res: Response, next: NextFunc
   }
 };
 
+export const getRelatedCitizens = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const citizens = await companiesService.getRelatedCitizens(id);
+    res.status(200).json({
+      success: true,
+      data: {
+        citizens
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getCompaniesByCategoryName = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { categoryName } = req.params;

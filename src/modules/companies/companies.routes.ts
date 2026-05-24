@@ -5,7 +5,8 @@ import {
   getCompaniesByCategoryName,
   createCompany,
   updateCompany,
-  deactivateCompany
+  deactivateCompany,
+  getRelatedCitizens
 } from './companies.controller';
 import { validateCreateCompany, validateUpdateCompany } from './companies.validation';
 import { authenticateToken, requireRole } from '../../middleware/auth.middleware';
@@ -160,5 +161,32 @@ router.patch('/:id', authenticateToken, requireRole(['ADMIN']), validateUpdateCo
  *         description: Compañía desactivada
  */
 router.delete('/:id', authenticateToken, requireRole(['ADMIN']), deactivateCompany);
+
+/**
+ * @swagger
+ * /api/companies/{id}/citizens:
+ *   get:
+ *     summary: Obtener ciudadanos relacionados con una compañía
+ *     description: Retorna una lista de usuarios con rol 'citizen' que han creado reportes asignados a esta compañía.
+ *     tags: [Companies]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID de la compañía
+ *     responses:
+ *       200:
+ *         description: Lista de ciudadanos obtenida exitosamente
+ *       401:
+ *         description: No autenticado
+ *       404:
+ *         description: Compañía no encontrada
+ */
+router.get('/:id/citizens', authenticateToken, getRelatedCitizens);
 
 export default router;

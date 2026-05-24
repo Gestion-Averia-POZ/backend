@@ -25,6 +25,13 @@ class CompaniesService {
     return await companiesRepository.findByCategoryName(categoryName);
   }
 
+  async getRelatedCitizens(companyId: string) {
+    // Verificar que la compañía exista
+    await this.getCompanyById(companyId);
+
+    return await companiesRepository.findRelatedCitizens(companyId);
+  }
+
   async createCompany(data: CreateCompanyData) {
     const existingCompany = await companiesRepository.findByName(data.name);
     if (existingCompany) {

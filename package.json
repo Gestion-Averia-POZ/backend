@@ -16,6 +16,7 @@
     "seed:failures": "ts-node prisma/seed-failure-types.ts",
     "seed:datos": "ts-node prisma/seed-datos-realistas.ts",
     "import:geojson": "ts-node scripts/import-geojson.ts",
+    "test:import": "ts-node tests/import-tests.ts",
     "clean": "rm -rf dist .cache .prisma/client",
     "install:prod": "npm ci --only=production",
     "postinstall": "prisma generate"
