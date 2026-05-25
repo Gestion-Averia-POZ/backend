@@ -4,7 +4,6 @@ import reportsService from './reports.service';
 import geolocationService from '../../services/geolocation.service';
 import geocodingService from '../../services/geocoding.service';
 import csvReportsImportService from '../../services/csv-reports-import.service';
-import * as xlsx from 'xlsx';
 import prisma from '../../config/prisma';
 
 export const createReport = async (req: Request, res: Response, next: NextFunction) => {
@@ -629,13 +628,20 @@ export const importReportsFromCSV = async (req: Request, res: Response, next: Ne
     let csvContent = '';
     
     if (isExcel) {
-      // Convertir Excel a CSV
-      const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-      const firstSheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[firstSheetName];
-      csvContent = xlsx.utils.sheet_to_csv(worksheet);
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.load(req.file.buffer);
+      const ws = wb.worksheets[0];
+      const rowsArr: string[][] = [];
+      ws.eachRow((row) => {
+        const cells = (row.values as ExcelJS.CellValue[]).slice(1).map((cell) => {
+          if (cell === null || cell === undefined) return '';
+          if (typeof cell === 'object' && 'text' in cell) return String((cell as any).text ?? '');
+          return String(cell);
+        });
+        rowsArr.push(cells);
+      });
+      csvContent = rowsArr.map(r => r.join(',')).join('\n');
     } else {
-      // Leer CSV directamente
       csvContent = req.file.buffer.toString('utf-8');
     }
     // Importar reportes
@@ -688,7 +694,7 @@ export const downloadCSVTemplate = async (req: Request, res: Response, next: Nex
  */
 export const downloadExcelTemplate = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const buffer = csvReportsImportService.generateExcelTemplate();
+    const buffer = await csvReportsImportService.generateExcelTemplate();
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename=plantilla-reportes.xlsx');

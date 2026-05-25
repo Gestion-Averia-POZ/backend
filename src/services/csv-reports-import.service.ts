@@ -12,7 +12,7 @@
 
 import prisma from '../config/prisma';
 import { Prisma } from '@prisma/client';
-import * as xlsx from 'xlsx';
+import * as ExcelJS from 'exceljs';
 
 export interface CSVReportImportResult {
   success: boolean;
@@ -514,7 +514,7 @@ class CSVReportsImportService {
   /**
    * Generar plantilla Excel para reportes
    */
-  generateExcelTemplate(): Buffer {
+  async generateExcelTemplate(): Promise<Buffer> {
     const headers = [
       'description',
       'sector',
@@ -567,11 +567,13 @@ class CSVReportsImportService {
       ]
     ];
 
-    const worksheet = xlsx.utils.aoa_to_sheet([headers, ...exampleRows]);
-    const workbook = xlsx.utils.book_new();
-    xlsx.utils.book_append_sheet(workbook, worksheet, 'Reportes');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Reportes');
+    worksheet.addRow(headers);
+    exampleRows.forEach(row => worksheet.addRow(row));
 
-    return xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
   }
 }
 

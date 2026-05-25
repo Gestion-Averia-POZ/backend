@@ -13,7 +13,7 @@
 
 import prisma from '../config/prisma';
 import bcrypt from 'bcrypt';
-import * as xlsx from 'xlsx';
+import * as ExcelJS from 'exceljs';
 
 export interface CSVUserImportResult {
   success: boolean;
@@ -361,7 +361,7 @@ class CSVUsersImportService {
   /**
    * Generar plantilla Excel para usuarios
    */
-  generateExcelTemplate(): Buffer {
+  async generateExcelTemplate(): Promise<Buffer> {
     const headers = [
       'name',
       'lastname',
@@ -380,11 +380,13 @@ class CSVUsersImportService {
       ['Luis', 'Hernández', 'luis.hernandez@yahoo.com', '+58 412 4567890', 'miPassword123', 'WORKER', 'Fospuca']
     ];
 
-    const worksheet = xlsx.utils.aoa_to_sheet([headers, ...exampleRows]);
-    const workbook = xlsx.utils.book_new();
-    xlsx.utils.book_append_sheet(workbook, worksheet, 'Usuarios');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Usuarios');
+    worksheet.addRow(headers);
+    exampleRows.forEach(row => worksheet.addRow(row));
 
-    return xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
   }
 }
 
