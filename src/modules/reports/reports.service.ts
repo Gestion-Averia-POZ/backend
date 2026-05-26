@@ -29,7 +29,7 @@ interface ReportsFilters {
   reportState?: 'PENDIENTE' | 'EN_PROCESO' | 'COMPLETADO' | 'CANCELADO';
 }
 
-// Include reutilizable para todos los queries de reporte
+// Include de relaciones reutilizable para todos los queries
 const REPORT_INCLUDE = {
   category:        { select: { id: true, name: true } },
   neighborhood:    { select: { id: true, name: true } },
@@ -38,6 +38,25 @@ const REPORT_INCLUDE = {
   failureType:     { select: { id: true, name: true, priority: true } },
   assignedManager: { select: { id: true, name: true, lastname: true, email: true } },
   user:            { select: { id: true, name: true, lastname: true, email: true, phoneNumber: true } }
+} as const;
+
+// Select de campos escalares para listas (sin urlPhoto — solo se muestra en el detalle)
+const REPORT_SCALAR_SELECT = {
+  id: true,
+  description: true,
+  address: true,
+  priority: true,
+  isActive: true,
+  createdAt: true,
+  updatedAt: true,
+  // urlPhoto intencionalmente omitida
+  categoryId: true,
+  userId: true,
+  neighborhoodId: true,
+  stateId: true,
+  companyId: true,
+  failureTypeId: true,
+  assignedManagerId: true,
 } as const;
 
 class ReportsService {
@@ -192,12 +211,14 @@ class ReportsService {
   }
 
   /**
-   * Obtener un reporte por ID (incluye historial de cambios)
+   * Obtener un reporte por ID (incluye historial de cambios y foto)
    */
   async getReportById(reportId: string) {
     const report = await prisma.report.findFirst({
       where: { id: reportId, isActive: true },
-      include: {
+      select: {
+        ...REPORT_SCALAR_SELECT,
+        urlPhoto: true,   // Único endpoint que devuelve la foto
         ...REPORT_INCLUDE,
         historyChanges: {
           orderBy: { createdAt: 'desc' },

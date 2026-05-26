@@ -4,11 +4,15 @@ import { AnyZodObject } from 'zod';
 export const validate = (schema: AnyZodObject) => 
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await schema.parseAsync({
+      const parsed = await schema.parseAsync({
         body: req.body,
         query: req.query,
         params: req.params
       });
+      // Reemplazar con los valores coercionados/transformados por Zod
+      req.body   = parsed.body   ?? req.body;
+      req.query  = parsed.query  ?? req.query;
+      req.params = parsed.params ?? req.params;
       next();
     } catch (error) {
       res.status(400).json({ success: false, errors: error });

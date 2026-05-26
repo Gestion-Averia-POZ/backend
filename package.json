@@ -60,6 +60,7 @@
     "@types/nodemailer": "^8.0.0",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
+    "@types/uuid": "^10.0.0",
     "prisma": "^5.0.0",
     "supabase": "^2.87.2",
     "ts-node": "^10.9.2",

@@ -12,14 +12,14 @@ export const createReportSchema = z.object({
       .min(10, 'La descripción debe tener al menos 10 caracteres')
       .max(500, 'La descripción no puede exceder 500 caracteres')
       .trim(),
-    latitude: z
+    latitude: z.coerce
       .number({
         required_error: 'La latitud es requerida',
         invalid_type_error: 'La latitud debe ser un número'
       })
       .min(-90, 'La latitud debe estar entre -90 y 90')
       .max(90, 'La latitud debe estar entre -90 y 90'),
-    longitude: z
+    longitude: z.coerce
       .number({
         required_error: 'La longitud es requerida',
         invalid_type_error: 'La longitud debe ser un número'
@@ -36,7 +36,7 @@ export const createReportSchema = z.object({
       .string()
       .uuid('ID de empresa inválido')
       .optional(),
-    failureTypeId: z
+    failureTypeId: z.coerce
       .number()
       .int('El ID de tipo de falla debe ser un número entero')
       .positive('El ID de tipo de falla debe ser positivo')

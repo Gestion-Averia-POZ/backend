@@ -25,8 +25,11 @@ import {
 import { validateCreateReport, validateDetectNeighborhood, validateReportsFilters } from './reports.validation';
 import { authenticateToken, requireRole } from '../../middleware/auth.middleware';
 import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { v4 as uuidv4 } from 'uuid';
 
-// Configurar multer para upload de archivos CSV
+// Configurar multer para upload de archivos CSV o Excel (importación)
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -40,6 +43,35 @@ const upload = multer({
       cb(null, true);
     } else {
       cb(new Error('Solo se permiten archivos CSV o Excel (.xlsx)'));
+    }
+  }
+});
+
+// Configurar multer para upload de imágenes de reportes (guardado en disco)
+const UPLOADS_DIR = path.join(process.cwd(), 'uploads', 'reports');
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+const imageStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, UPLOADS_DIR);
+  },
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${uuidv4()}${ext}`);
+  }
+});
+
+const uploadImage = multer({
+  storage: imageStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB máximo para imágenes
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Solo se permiten imágenes (jpg, png, webp, gif)'));
     }
   }
 });
@@ -425,7 +457,7 @@ router.post('/get-address', authenticateToken, validateDetectNeighborhood, getAd
  *       401:
  *         description: No autenticado
  */
-router.post('/', authenticateToken, validateCreateReport, createReport);
+router.post('/', authenticateToken, uploadImage.single('photo'), validateCreateReport, createReport);
 
 /**
  * @swagger
@@ -714,7 +746,7 @@ router.get('/assigned', authenticateToken, getAssignedReports);
  *       401:
  *         description: No autenticado
  */
-router.patch('/:reportId', authenticateToken, updateReport);
+router.patch('/:reportId', authenticateToken, uploadImage.single('photo'), updateReport);
 
 /**
  * @swagger

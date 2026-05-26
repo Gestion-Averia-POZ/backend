@@ -31,6 +31,9 @@ app.use(express.urlencoded({ extended: true }));
 // Archivos estáticos públicos — sin autenticación (heatmap-data.json)
 app.use(express.static(path.join(process.cwd(), 'public')));
 
+// Imágenes de reportes — servidas públicamente
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
 // Swagger Documentation
 setupSwagger(app);
 

@@ -82,7 +82,7 @@ export const importUsersFromCSV = async (req: Request, res: Response, next: Next
     
     if (isExcel) {
       const wb = new ExcelJS.Workbook();
-      await wb.xlsx.load(req.file.buffer);
+      await wb.xlsx.load(req.file.buffer as any);
       const ws = wb.worksheets[0];
       const rowsArr: string[][] = [];
       ws.eachRow((row) => {

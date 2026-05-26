@@ -8,11 +8,20 @@ import prisma from '../../config/prisma';
 
 export const createReport = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { description, latitude, longitude, categoryId, companyId, failureTypeId, assignedManagerId, urlPhoto, address } = req.body;
+    const { description, latitude, longitude, categoryId, companyId, failureTypeId, assignedManagerId, address } = req.body;
     const userId = req.user?.userId;
 
     if (!userId) {
       return res.status(401).json({ success: false, message: 'Usuario no autenticado' });
+    }
+
+    // Construir URL de la imagen si se subio un archivo
+    let urlPhoto: string | undefined;
+    if (req.file) {
+      const filename = req.file.filename;
+      const host = req.get('host') || `localhost:${process.env.PORT || 3000}`;
+      const protocol = req.protocol || 'http';
+      urlPhoto = `${protocol}://${host}/uploads/reports/${filename}`;
     }
 
     const report = await reportsService.createReport({
@@ -251,7 +260,7 @@ export const getAssignedReports = async (req: Request, res: Response, next: Next
 export const updateReport = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { reportId } = req.params;
-    const { description, failureTypeId, urlPhoto } = req.body;
+    const { description, failureTypeId } = req.body;
     const userId = req.user?.userId;
 
     if (!userId) {
@@ -259,6 +268,15 @@ export const updateReport = async (req: Request, res: Response, next: NextFuncti
         success: false,
         message: 'Usuario no autenticado'
       });
+    }
+
+    // Construir URL de la imagen si se subio un archivo nuevo
+    let urlPhoto: string | undefined;
+    if (req.file) {
+      const filename = req.file.filename;
+      const host = req.get('host') || `localhost:${process.env.PORT || 3000}`;
+      const protocol = req.protocol || 'http';
+      urlPhoto = `${protocol}://${host}/uploads/reports/${filename}`;
     }
 
     const report = await reportsService.updateReport(reportId, userId, {
@@ -629,7 +647,7 @@ export const importReportsFromCSV = async (req: Request, res: Response, next: Ne
     
     if (isExcel) {
       const wb = new ExcelJS.Workbook();
-      await wb.xlsx.load(req.file.buffer);
+      await wb.xlsx.load(req.file.buffer as any);
       const ws = wb.worksheets[0];
       const rowsArr: string[][] = [];
       ws.eachRow((row) => {
